@@ -14,15 +14,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
-        :root { --kmitl-orange: #ea580c; } 
+        :root { --kmitl-orange: #ea580c; } /* เปลี่ยนส้มให้ดูพรีเมียมและทันสมัยขึ้น */
         
+        /* สู้กับ WordPress wpautop (การเติม <br> และ <p> อัตโนมัติ) */
         #osda-app-wrapper br,
         #osda-app-wrapper p:empty {
             display: none !important;
         }
 
+        /* บังคับให้พื้นหลังกว้างเต็มจอ ทะลุขอบเขตจำกัดความกว้างของ WordPress Theme */
         #osda-app-wrapper {
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important; 
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important; /* พื้นหลังสีเทาอ่อนสะอาดตา */
             min-height: 100vh;
             width: 100vw !important;
             position: relative;
@@ -34,6 +36,7 @@
             -webkit-tap-highlight-color: transparent;
         }
         
+        /* สร้างขอบเขตไม่ให้ Theme WordPress มารบกวน */
         #osda-app-wrapper * { 
             font-family: 'Sarabun', sans-serif !important;
             box-sizing: border-box !important; 
@@ -47,12 +50,14 @@
         
         body { color: #1e293b; margin: 0; overflow-x: hidden; }
         
+        /* ดันขอบด้านบนลงมาเผื่อระยะ WP Header */
         .hub-container { 
             max-width: 500px;
             margin: auto; padding: 60px 20px 40px 20px !important; min-height: 100vh;
             position: relative;
         }
         
+        /* ป้องกัน CSS ของ WordPress ตีกับกล่อง Header + อัปเกรดเงาให้ดูมีมิติ */
         .hub-header-box {
             background: rgba(255, 255, 255, 0.95) !important;
             backdrop-filter: blur(12px) !important;
@@ -82,6 +87,7 @@
 
         .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         
+        /* อัปเกรดการ์ดเมนูให้เด้งเวลานำเมาส์ไปชี้ (Hover) */
         .hub-card { 
             background: linear-gradient(145deg, #ffffff, #fcfcfd);
             border-radius: 28px; 
@@ -96,6 +102,7 @@
         }
         .hub-card:active { transform: scale(0.96); }
 
+        /* ใส่สีพื้นหลังให้ไอคอนเมนูต่างๆ อัตโนมัติ โดยไม่แก้ HTML */
         .hub-card > div:first-child {
             width: 56px !important; height: 56px !important; border-radius: 20px !important;
             box-shadow: inset 0 2px 5px rgba(255,255,255,0.5), 0 4px 10px rgba(0,0,0,0.04);
@@ -106,6 +113,7 @@
         .hub-card:nth-child(4) > div:first-child { background-image: linear-gradient(135deg, #fef2f2, #fee2e2) !important; }
         .hub-card:nth-child(5) > div:first-child { background-image: linear-gradient(135deg, #f0fdfa, #ccfbf1) !important; }
         
+        /* อัปเกรด z-index ให้เหนือ WP ทั้งหมด */
         #sidebar {
             position: fixed !important; top: 0 !important; left: -300px; width: 280px !important; height: 100% !important;
             background: white !important; z-index: 999999 !important;
@@ -132,11 +140,13 @@
         .nav-item.edit { color: #16a34a; } .nav-item.edit:hover { background: #f0fdf4; }
         .nav-item.cancel { color: #dc2626; } .nav-item.cancel:hover { background: #fef2f2; }
         
+        /* อัปเกรด z-index ให้ Modal และเพิ่มระยะขอบบน */
         #appModal { 
             position: fixed !important; inset: 0 !important; background: #f8fafc !important; 
             z-index: 999990 !important; display: none; overflow-y: auto !important;
         }
 
+        /* หัวข้อด้านบนสุดให้โปร่งแสงแบบกระจก เพื่อไม่ให้ดูใหญ่ทึบตัน */
         .app-header { 
             display: flex !important; align-items: center !important; justify-content: space-between !important;
             padding: 16px 20px !important; 
@@ -145,12 +155,14 @@
             border-bottom: 1px solid rgba(0,0,0,0.03) !important; 
             position: sticky !important; top: 0 !important; z-index: 1100 !important;
         }
+        /* ตกแต่งปุ่มกลับ (ลูกศร) อัตโนมัติ */
         .app-header button {
             border-radius: 14px !important; border: 1px solid #f1f5f9 !important; background: #ffffff !important;
             padding: 8px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.02) !important; transition: background 0.2s;
         }
         .app-header button:active { background: #f1f5f9 !important; }
 
+        /* อัปเกรดช่อง Input และ Textarea */
         input, textarea, select { 
             width: 100%; padding: 14px 16px; border-radius: 16px; 
             border: 1.5px solid #f1f5f9; font-size: 15px; outline: none; 
@@ -161,6 +173,11 @@
             box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.05);
         }
         
+        #osda-app-wrapper .input-with-icon {
+            padding-left: 44px !important;
+        }
+
+        /* อัปเกรดปุ่มยืนยันบันทึกข้อมูล */
         .btn-submit { 
             background: linear-gradient(135deg, #f97316, #ea580c); 
             color: white; width: 100%; font-weight: 800; padding: 16px; 
@@ -170,14 +187,20 @@
         }
         .btn-submit:active { transform: scale(0.97); box-shadow: 0 2px 10px -2px rgba(234, 88, 12, 0.3); }
         
+        .dropdown-list { position: absolute; width: 100%; max-height: 160px; overflow-y: auto; background: white; border: 1px solid #e2e8f0; border-radius: 12px; z-index: 50; display: none; }
+        .dropdown-item { padding: 12px; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f8fafc; }
+        
+        /* อัปเกรดการ์ดแสดงรายการ (List Card) */
         .doc-card { 
             background: white; border-radius: 20px; padding: 18px; margin-bottom: 14px; 
             border: 1px solid #ffffff; border-left: 5px solid var(--kmitl-orange); 
             box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03); transition: all 0.2s ease;
         }
+        .doc-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -4px rgba(0,0,0,0.05); }
         
         input:disabled { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: transparent; font-weight: 600; }
 
+        /* จัดระเบียบกล่องแบบฟอร์มอัตโนมัติ */
         #docForm {
             box-shadow: 0 10px 30px -5px rgba(0,0,0,0.04) !important;
             border: 1px solid #ffffff !important;
@@ -186,6 +209,7 @@
             background: white !important;
         }
 
+        /* จัดระเบียบกล่องปฏิทินอัตโนมัติ */
         #listSection > div:first-child {
             box-shadow: 0 10px 30px -5px rgba(0,0,0,0.04) !important;
             border: 1px solid #ffffff !important;
@@ -193,6 +217,7 @@
             padding: 24px !important;
         }
 
+        /* จัดระเบียบหัวข้อ (Labels) ให้เล็กและกะทัดรัดลงเหมือนแอปใหม่ๆ */
         .text-xs.font-bold.text-slate-400.mb-1 {
             font-size: 11.5px !important;
             text-transform: uppercase !important;
@@ -202,6 +227,7 @@
             color: #94a3b8 !important;
         }
         
+        /* จัดระเบียบช่องเลขที่รันอัตโนมัติให้โดดเด่น */
         #seqDisplay {
             background-color: #fff7ed !important;
             border-color: #fed7aa !important;
@@ -209,9 +235,6 @@
             padding: 16px !important;
             border-radius: 20px !important;
             box-shadow: inset 0 2px 4px rgba(234, 88, 12, 0.05) !important;
-            text-align: center;
-            font-weight: bold;
-            color: #ea580c;
         }
     </style>
 </head>
@@ -247,53 +270,56 @@
         <div id="hubPage" class="hub-container">
             
             <div class="hub-header-box">
-                <div class="logo-text-osda" style="font-size: 42px !important; line-height: 1 !important; margin: 0 0 5px 0 !important;">OSDA</div>
-                <div class="text-2xl font-black text-slate-800 tracking-tight" style="margin: 0 0 5px 0 !important;">DOCS SYSTEM</div>
-                <div class="text-slate-400 text-sm">เลือกรายการที่ต้องการดำเนินการ</div>
+                <div class="logo-text-osda" style="font-size: 42px !important; line-height: 1 !important; margin: 0 0 5px 0 !important; padding: 0 !important; letter-spacing: -1px !important;">OSDA</div>
+            
+                <div class="text-2xl font-black text-slate-800 tracking-tight" style="margin: 0 0 5px 0 !important; padding: 0 !important; line-height: 1.2 !important;">DOCS SYSTEM</div>
+                <div class="text-slate-400 text-sm" style="margin: 0 0 12px 0 !important; padding: 0 !important; line-height: 1.5 !important;">เลือกรายการที่ต้องการดำเนินการ</div>
             </div>
 
             <div class="hub-grid z-10">
                 <div class="hub-card" onclick="openModule('new')">
-                    <div class="text-orange-600"><i data-lucide="plus-circle"></i></div>
+                    <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center"><i data-lucide="plus-circle"></i></div>
                     <div class="font-bold text-slate-700">บันทึกใหม่</div>
                 </div>
                 <div class="hub-card" onclick="openModule('backfill')">
-                    <div class="text-blue-600"><i data-lucide="history"></i></div>
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><i data-lucide="history"></i></div>
                     <div class="font-bold text-slate-700">ย้อนหลัง</div>
                 </div>
                 <div class="hub-card" onclick="openModule('edit')">
-                    <div class="text-green-600"><i data-lucide="pencil"></i></div>
+                    <div class="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center"><i data-lucide="pencil"></i></div>
                     <div class="font-bold text-slate-700">แก้ไขข้อมูล</div>
                 </div>
                 <div class="hub-card" onclick="openModule('cancel')">
-                    <div class="text-red-600"><i data-lucide="trash-2"></i></div>
+                    <div class="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center"><i data-lucide="trash-2"></i></div>
                     <div class="font-bold text-slate-700">ยกเลิกรายการ</div>
                 </div>
                 <div class="hub-card" onclick="exportCurrentMonthToExcel()">
-                    <div class="text-green-600"><i data-lucide="download"></i></div>
-                    <div class="font-bold text-slate-700 text-center">ส่งออก Excel<br><span class="text-[10px] text-slate-400">ประจำเดือนปัจจุบัน</span></div>
+                    <div class="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center"><i data-lucide="download"></i></div>
+                    <div class="font-bold text-slate-700 text-center">ส่งออก Excel<br><span class="text-[10px] font-normal text-slate-400">ประจำเดือนปัจจุบัน</span></div>
                 </div>
             </div>
         </div>
 
         <div id="appModal">
             <header class="app-header">
-                <button onclick="toggleSidebar()"><i data-lucide="menu" class="w-6 h-6 text-slate-600"></i></button>
+                <button onclick="toggleSidebar()" class="p-2 hover:bg-slate-100 bg-white rounded-full border border-slate-200 cursor-pointer shadow-sm">
+                    <i data-lucide="menu" class="w-6 h-6 text-slate-600"></i>
+                </button>
                 <div id="moduleTitle" class="font-bold text-slate-800 text-lg uppercase">TITLE</div>
                 <div class="w-10"></div>
             </header>
 
             <div class="p-5 max-w-[500px] mx-auto">
                 <div id="formSection" style="display:none;">
-                    <form id="docForm" class="space-y-4">
+                    <form id="docForm" class="space-y-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                         <input type="hidden" id="editId">
                         <div class="grid grid-cols-2 gap-3">
-                            <div><div class="text-xs font-bold text-slate-400 mb-1">จาก (ผู้จัดทำ)</div><input type="text" id="fromWho" required placeholder="พิมพ์ชื่อผู้จัดทำ..."></div>
-                            <div><div class="text-xs font-bold text-slate-400 mb-1">ถึง (ผู้รับ)</div><input type="text" id="toWho" required placeholder="พิมพ์ชื่อผู้รับ..."></div>
+                            <div class="relative"><div class="text-xs font-bold text-slate-400 mb-1">จาก (ผู้จัดทำ)</div><input type="text" id="fromWho" required placeholder="พิมพ์ชื่อผู้จัดทำ..." autocomplete="off"></div>
+                            <div class="relative"><div class="text-xs font-bold text-slate-400 mb-1">ถึง (ผู้รับ)</div><input type="text" id="toWho" required placeholder="พิมพ์ชื่อผู้รับ..." autocomplete="off"></div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
-                            <div><div class="text-xs font-bold text-slate-400 mb-1">หน่วยรับ</div><input type="text" id="department" placeholder="เช่น พัสดุ, คลัง"></div>
-                            <div><div class="text-xs font-bold text-slate-400 mb-1">เลขที่ (ถ้ามี)</div><input type="text" id="docNumber" placeholder="..."></div>
+                            <div class="relative"><div class="text-xs font-bold text-slate-400 mb-1">หน่วยรับ</div><input type="text" id="department" placeholder="เช่น พัสดุ, คลัง, OSDA" autocomplete="off"></div>
+                            <div class="relative"><div class="text-xs font-bold text-slate-400 mb-1">เลขที่ (ถ้ามี)</div><input type="text" id="docNumber" placeholder="..." autocomplete="off"></div>
                         </div>
                         <div><div class="text-xs font-bold text-slate-400 mb-1">ชื่อเรื่อง</div><input type="text" id="subject" required placeholder="พิมพ์หัวข้อเอกสาร..."></div>
                         <div><div class="text-xs font-bold text-slate-400 mb-1">รายละเอียด</div><textarea id="action" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม..."></textarea></div>
@@ -301,7 +327,7 @@
                             <div><div class="text-xs font-bold text-slate-400 mb-1">ลงวันที่</div><input type="date" id="dateInput" required onchange="calculateSeq()"></div>
                             <div><div class="text-xs font-bold text-slate-400 mb-1">เวลาบันทึก</div><input type="text" id="timeInput" disabled class="bg-slate-50 text-slate-500"></div>
                         </div>
-                        <div><div class="text-xs font-bold text-slate-400 mb-1">เลขลำดับเอกสาร</div><input type="text" id="seqDisplay" disabled></div>
+                        <div><div class="text-xs font-bold text-slate-400 mb-1">เลขลำดับเอกสารส่ง</div><input type="text" id="seqDisplay" readonly class="text-center font-bold text-orange-600 bg-orange-50/50 rounded-xl border-orange-100"></div>
                         <button type="submit" class="btn-submit">ยืนยันและบันทึกข้อมูล</button>
                     </form>
                 </div>
@@ -309,9 +335,9 @@
                 <div id="listSection" style="display:none;">
                     <div class="bg-white p-4 rounded-2xl border border-slate-100 mb-6 shadow-sm">
                         <div class="flex justify-between items-center mb-4">
-                            <button onclick="changeMonth(-1)" class="p-1 hover:bg-slate-50 rounded-lg"><i data-lucide="chevron-left"></i></button>
+                            <button onclick="changeMonth(-1)" class="bg-transparent border-none p-1 hover:bg-slate-50 rounded-lg"><i data-lucide="chevron-left"></i></button>
                             <div id="calendarMonth" class="font-bold text-slate-700"></div>
-                            <button onclick="changeMonth(1)" class="p-1 hover:bg-slate-50 rounded-lg"><i data-lucide="chevron-right"></i></button>
+                            <button onclick="changeMonth(1)" class="bg-transparent border-none p-1 hover:bg-slate-50 rounded-lg"><i data-lucide="chevron-right"></i></button>
                         </div>
                         <div id="calendarDays" class="grid grid-cols-7 gap-1 text-center text-xs text-slate-400"></div>
                     </div>
@@ -328,17 +354,18 @@
         window.location.replace('index.html');
     }
 
+    localforage.config({ name: 'OSDA_STORAGE' });
+    
     let db = JSON.parse(localStorage.getItem('kmitl_rt_db') || '[]');
     let currentMode = '';
     let viewDate = new Date();
     let selectedDateStr = new Date().toISOString().split('T')[0];
 
-    // 🔗 ลิงก์ Apps Script ล่าสุด (ตรวจสอบให้แน่ใจว่าเป็นของหน้าส่งข้อมูล)
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZv1V6AhBHu0h-veSAs95_3vuxKBnbYjTidj9K758b1N3lTvq5ueiVyJBaq4p62UEZ/exec';
-
     function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('open');
-        document.getElementById('sidebarOverlay').style.display = document.getElementById('sidebar').classList.contains('open') ? 'block' : 'none';
+        const sb = document.getElementById('sidebar');
+        const ov = document.getElementById('sidebarOverlay');
+        if(sb) sb.classList.toggle('open');
+        if(ov) ov.style.display = sb.classList.contains('open') ? 'block' : 'none';
     }
 
     function goHome() {
@@ -353,136 +380,212 @@
 
     function openModule(mode) {
         currentMode = mode;
-        document.getElementById('appModal').style.display = 'block';
-        document.getElementById('formSection').style.display = (mode === 'new' || mode === 'backfill') ? 'block' : 'none';
-        document.getElementById('listSection').style.display = (mode === 'edit' || mode === 'cancel') ? 'block' : 'none';
-        document.getElementById('moduleTitle').innerText = (mode === 'new' ? 'บันทึกใหม่' : mode === 'backfill' ? 'ย้อนหลัง' : mode === 'edit' ? 'แก้ไขข้อมูล' : 'ยกเลิกรายการ');
+        const dateInput = document.getElementById('dateInput');
+        const appModal = document.getElementById('appModal');
+        const formSection = document.getElementById('formSection');
+        const listSection = document.getElementById('listSection');
+        const moduleTitle = document.getElementById('moduleTitle');
         
+        if(appModal) appModal.style.display = 'block';
+        if(formSection) formSection.style.display = (mode === 'new' || mode === 'backfill') ? 'block' : 'none';
+        if(listSection) listSection.style.display = (mode === 'edit' || mode === 'cancel') ? 'block' : 'none';
+        
+        if(moduleTitle) moduleTitle.innerText = (mode === 'new' ? 'บันทึกใหม่' : mode === 'backfill' ? 'ย้อนหลัง' : mode === 'edit' ? 'แก้ไขข้อมูล' : 'ยกเลิกรายการ');
+
         if(mode === 'new') {
             resetForm();
-            document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
-            document.getElementById('dateInput').disabled = true;
+            if(dateInput) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+                dateInput.disabled = true;
+            }
+            calculateSeq();
         } else if(mode === 'backfill') {
             resetForm();
-            document.getElementById('dateInput').disabled = false;
-        }
-
-        if(mode === 'edit' || mode === 'cancel') {
+            if(dateInput) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+                dateInput.disabled = false;
+            }
+            calculateSeq();
+        } else {
             renderCalendar();
             showList(selectedDateStr);
         }
-
-        if(window.lucide) lucide.createIcons();
-        calculateSeq();
     }
 
-    // 🟢 ระบบดึงเลขรันแบบออฟไลน์ (หน้าเว็บโชว์เป็น Preview)
     function calculateSeq() {
         try {
-            const target = document.getElementById('dateInput').value;
+            const editIdEl = document.getElementById('editId');
+            if(editIdEl && editIdEl.value) return; 
+            
+            const dateInputEl = document.getElementById('dateInput');
             const seqDisplayEl = document.getElementById('seqDisplay');
-            if(!target || !seqDisplayEl || document.getElementById('editId').value) return;
+            if(!dateInputEl || !dateInputEl.value || !seqDisplayEl) return;
 
-            if (currentMode === 'new') {
+            const tDateStr = dateInputEl.value;
+
+            if(currentMode === 'new') {
                 const sortedAll = [...db].sort((a,b) => a.sequence.localeCompare(b.sequence, undefined, {numeric: true}));
-                let nextBase = sortedAll.length ? parseInt(sortedAll[sortedAll.length-1].sequence.split('.')[0]) + 1 : 1;
-                seqDisplayEl.value = String(nextBase).padStart(4, '0');
-            } else {
-                const sameDay = db.filter(r => r.date === target).sort((a,b) => b.sequence.localeCompare(a.sequence, undefined, {numeric: true}));
-                if (sameDay.length) {
-                    let last = sameDay[0].sequence;
-                    let base = last.includes('.') ? last.substring(0, last.lastIndexOf('.')) : last;
-                    seqDisplayEl.value = `${base}.${String(last.includes('.') ? parseInt(last.split('.').pop()) + 1 : 1).padStart(2, '0')}`;
-                } else { 
-                    const pastData = db.filter(r => r.date < target).sort((a,b) => b.sequence.localeCompare(a.sequence, undefined, {numeric: true}));
-                    let lastBase = pastData.length ? pastData[0].sequence.split('.')[0] : "0000";
-                    seqDisplayEl.value = `${String(parseInt(lastBase)).padStart(4, '0')}.01`;
+                let lastSeqNum = 0;
+                if(sortedAll.length > 0) {
+                    const lSeq = sortedAll[sortedAll.length-1].sequence;
+                    lastSeqNum = parseInt(lSeq.split('.')[0]);
+                }
+                seqDisplayEl.value = String(lastSeqNum + 1).padStart(4, '0');
+            } else if(currentMode === 'backfill') {
+                const dayData = db.filter(x => x.date === tDateStr).sort((a,b) => a.sequence.localeCompare(b.sequence, undefined, {numeric: true}));
+                if(dayData.length > 0) {
+                    const last = dayData[dayData.length-1].sequence;
+                    const base = last.split('.')[0];
+                    let sub = 1;
+                    if(last.includes('.')) {
+                        sub = parseInt(last.split('.').pop()) + 1;
+                    }
+                    seqDisplayEl.value = `${base}.${String(sub).padStart(2, '0')}`;
+                } else {
+                    const pastData = db.filter(x => x.date < tDateStr).sort((a,b) => {
+                        if(a.date === b.date) return a.sequence.localeCompare(b.sequence, undefined, {numeric: true});
+                        return a.date.localeCompare(b.date);
+                    });
+                    let baseNum = 0;
+                    if(pastData.length > 0) {
+                        const lSeq = pastData[pastData.length-1].sequence;
+                        baseNum = parseInt(lSeq.split('.')[0]);
+                    }
+                    seqDisplayEl.value = `${String(baseNum).padStart(4, '0')}.01`;
                 }
             }
         } catch (err) {}
     }
 
-    setInterval(() => { 
-        const editIdEl = document.getElementById('editId');
-        const timeInputEl = document.getElementById('timeInput');
-        if(editIdEl && timeInputEl && editIdEl.value === "") {
-            timeInputEl.value = new Date().toLocaleTimeString('th-TH', { hour12: false }) + " น."; 
-        }
+    setInterval(() => {
+        try {
+            const editIdEl = document.getElementById('editId');
+            const timeInputEl = document.getElementById('timeInput');
+            if(editIdEl !== null && timeInputEl !== null) {
+                if (editIdEl.value === "") {
+                    timeInputEl.value = new Date().toLocaleTimeString('th-TH', { hour12: false }) + " น.";
+                }
+            }
+        } catch (e) {}
     }, 1000);
 
     function resetForm() {
-        document.getElementById('docForm').reset();
-        document.getElementById('editId').value = '';
-        document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+        try {
+            const docForm = document.getElementById('docForm');
+            const editId = document.getElementById('editId');
+            const dateInput = document.getElementById('dateInput');
+            const deptInput = document.getElementById('department');
+            const docNumInput = document.getElementById('docNumber');
+            
+            if(docForm) docForm.reset();
+            if(editId) editId.value = '';
+            if(deptInput) deptInput.value = '';
+            if(docNumInput) docNumInput.value = '';
+            if(dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+        } catch(e) {}
     }
 
     function renderCalendar() {
-        const year = viewDate.getFullYear();
-        const month = viewDate.getMonth();
-        document.getElementById('calendarMonth').innerText = `${["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"][month]} ${year + 543}`;
-        
-        const cal = document.getElementById('calendarDays');
-        cal.innerHTML = '<div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div>';
-        
-        for(let i=0; i<new Date(year, month, 1).getDay(); i++) cal.innerHTML += '<div></div>';
-        for(let i=1; i<=new Date(year, month + 1, 0).getDate(); i++) {
-            const dStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-            const hasData = db.some(r => r.date === dStr);
-            const isSelected = dStr === selectedDateStr;
-            cal.innerHTML += `
-                <div onclick="selectDate('${dStr}')" class="p-2 cursor-pointer rounded-xl ${isSelected ? 'bg-orange-500 text-white font-bold' : 'hover:bg-slate-100'}">
-                    ${i}
-                    ${hasData && !isSelected ? '<div class="w-1.5 h-1.5 bg-orange-400 mx-auto rounded-full mt-1"></div>' : ''}
-                </div>`;
-        }
+        try {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            const monthNames = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+            
+            const calendarMonthEl = document.getElementById('calendarMonth');
+            if(calendarMonthEl) {
+                calendarMonthEl.innerText = `${monthNames[month]} ${year + 543}`;
+            }
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay();
+
+            const cal = document.getElementById('calendarDays');
+            if(cal) {
+                cal.innerHTML = '<div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div>';
+                for(let i=0; i<firstDay; i++) cal.innerHTML += '<div></div>';
+                for(let i=1; i<=daysInMonth; i++) {
+                    const dStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                    const hasData = db.some(r => r.date === dStr);
+                    cal.innerHTML += `<div onclick="selectDate('${dStr}')" class="p-2 cursor-pointer rounded-xl ${dStr===selectedDateStr?'bg-orange-500 text-white font-bold':'hover:bg-slate-100'}">${i}${hasData ? '<div class="w-1.5 h-1.5 bg-orange-500 rounded-full mx-auto mt-1"></div>' : ''}</div>`;
+                }
+            }
+        } catch (err) {}
     }
 
-    function selectDate(d) {
-        selectedDateStr = d;
+    function selectDate(dStr) {
+        selectedDateStr = dStr;
         renderCalendar();
-        showList(d);
+        showList(dStr);
     }
-    
-    function showList(d) {
-        const container = document.getElementById('dataList');
-        const filtered = db.filter(r => r.date === d).sort((a,b) => b.sequence.localeCompare(a.sequence, undefined, {numeric: true}));
-        
-        container.innerHTML = filtered.length ? '' : '<div class="text-center py-10 text-slate-300">ไม่มีข้อมูล</div>';
-        
-        filtered.forEach(r => {
-            container.innerHTML += `
-                <div class="doc-card">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="text-xs font-mono font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">${r.sequence}</div>
-                        <button onclick="${currentMode==='edit'?`editItem('${r.id}')`:`deleteItem('${r.id}')`}" class="${currentMode==='edit'?'bg-orange-500':'bg-red-500'} text-white px-3 py-1 rounded-lg text-xs">
-                            ${currentMode==='edit'?'แก้ไข':'ลบ'}
-                        </button>
-                    </div>
-                    <div class="text-sm font-bold text-slate-700">${r.subject}</div>
-                    <div class="text-[10px] text-slate-400 mt-2 flex justify-between bg-slate-50 p-1 rounded">
-                        <div>${r.time}</div>
-                        <div>${r.from_who} → ${r.toWho || r.to_who || ''}</div>
-                    </div>
-                </div>`;
-        });
+
+    function showList(dStr) {
+        try {
+            const list = document.getElementById('dataList');
+            if(!list) return;
+            list.innerHTML = '';
+            const dayData = db.filter(x => x.date === dStr).sort((a,b) => a.sequence.localeCompare(b.sequence, undefined, {numeric: true}));
+            
+            if(dayData.length === 0) {
+                list.innerHTML = '<div class="text-center text-slate-400 py-6 text-sm">ไม่มีข้อมูลในวันนี้</div>';
+                return;
+            }
+
+            dayData.forEach(r => {
+                const isCancel = currentMode === 'cancel';
+                list.innerHTML += `
+                    <div class="doc-card relative">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-md text-sm">เลขลำดับ: ${r.sequence}</span>
+                            <span class="text-xs text-slate-400">${r.time}</span>
+                        </div>
+                        <div class="font-bold text-slate-800 mb-1 leading-tight">${r.subject}</div>
+                        <div class="text-sm text-slate-500 mb-3 line-clamp-2">${r.action}</div>
+                        <div class="text-xs text-slate-400 flex items-center gap-1 mb-3"><i data-lucide="user" class="w-3 h-3"></i> จาก: ${r.from_who} <i data-lucide="arrow-right" class="w-3 h-3 mx-1"></i> ถึง: ${r.toWho}</div>
+                        ${isCancel 
+                            ? `<button onclick="deleteItem('${r.id}')" class="w-full bg-red-50 text-red-600 font-bold py-2 rounded-xl text-sm hover:bg-red-100 transition-colors">ยกเลิกรายการ</button>`
+                            : `<button onclick="editItem('${r.id}')" class="w-full bg-slate-50 text-slate-700 font-bold py-2 rounded-xl text-sm hover:bg-slate-100 transition-colors">แก้ไขข้อมูล</button>`
+                        }
+                    </div>`;
+            });
+            if(window.lucide) lucide.createIcons();
+        } catch (err) {}
     }
 
     window.editItem = (id) => {
-        const r = db.find(x => x.id === id); if(!r) return;
-        document.getElementById('formSection').style.display = 'block';
-        document.getElementById('listSection').style.display = 'none';
-        document.getElementById('editId').value = r.id;
-        document.getElementById('fromWho').value = r.from_who || '';
-        document.getElementById('toWho').value = r.toWho || r.to_who || '';
-        document.getElementById('department').value = r.department || '';
-        document.getElementById('docNumber').value = r.doc_number || '';
-        document.getElementById('subject').value = r.subject || '';
-        document.getElementById('action').value = r.action || '';
-        document.getElementById('dateInput').value = r.date;
-        document.getElementById('dateInput').disabled = true;
-        document.getElementById('timeInput').value = r.time;
-        document.getElementById('seqDisplay').value = r.sequence;
-        window.scrollTo(0,0);
+        try {
+            const r = db.find(x => x.id === id);
+            if(!r) return;
+            currentMode = 'edit';
+            
+            const formSection = document.getElementById('formSection');
+            const listSection = document.getElementById('listSection');
+            if(formSection) formSection.style.display = 'block';
+            if(listSection) listSection.style.display = 'none';
+
+            const editIdEl = document.getElementById('editId');
+            const fromWhoEl = document.getElementById('fromWho');
+            const toWhoEl = document.getElementById('toWho');
+            const deptEl = document.getElementById('department');
+            const docNumEl = document.getElementById('docNumber');
+            const subjectEl = document.getElementById('subject');
+            const actionEl = document.getElementById('action');
+            const dateInputEl = document.getElementById('dateInput');
+            const timeInputEl = document.getElementById('timeInput');
+            const seqDisplayEl = document.getElementById('seqDisplay');
+
+            if(editIdEl) editIdEl.value = r.id;
+            if(fromWhoEl) fromWhoEl.value = r.from_who || '';
+            if(toWhoEl) toWhoEl.value = r.toWho || '';
+            if(deptEl) deptEl.value = r.department || '';
+            if(docNumEl) docNumEl.value = r.doc_number || '';
+            if(subjectEl) subjectEl.value = r.subject || '';
+            if(actionEl) actionEl.value = r.action || '';
+            if(dateInputEl) { dateInputEl.value = r.date; dateInputEl.disabled = true; }
+            if(timeInputEl) timeInputEl.value = r.time;
+            if(seqDisplayEl) seqDisplayEl.value = r.sequence;
+
+            window.scrollTo(0,0);
+        } catch (e) {}
     };
 
     window.deleteItem = (id) => {
@@ -494,57 +597,91 @@
         }
     };
 
-    // 🟢 ระบบบันทึกเข้า Google Sheets (แก้ไขบั๊กเชื่อมต่อ)
+    // 🟢🟢 จุดที่ผ่าตัดแก้ไขให้ส่งข้อมูลขึ้น Google Sheets 🟢🟢
     document.addEventListener('DOMContentLoaded', () => {
         if(window.lucide) lucide.createIcons();
-        
-        document.getElementById('docForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const id = document.getElementById('editId').value || Date.now().toString();
-                const record = { 
-                    sheetType: 'sender', // 👈 ติดป้ายว่ามาจากหน้าส่งข้อมูล
-                    id: id, 
-                    from_who: document.getElementById('fromWho').value, 
-                    toWho: document.getElementById('toWho').value, 
-                    department: document.getElementById('department').value,
-                    doc_number: document.getElementById('docNumber').value,
-                    subject: document.getElementById('subject').value, 
-                    action: document.getElementById('action').value, 
-                    date: document.getElementById('dateInput').value, 
-                    time: document.getElementById('timeInput').value, 
-                    sequence: document.getElementById('seqDisplay').value 
-                };
-                
-                Swal.fire({ title: 'กำลังบันทึกเข้า Cloud...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-                // ใช้ Fetch แบบไร้ no-cors เพื่อให้สามารถอ่าน json ตอบกลับจากเซิร์ฟเวอร์ได้
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(record)
-                });
-                const res = await response.json();
+        const docForm = document.getElementById('docForm');
+        if (docForm) {
+            // เปลี่ยนฟังก์ชันให้เป็น async เพื่อใช้คู่กับ fetch
+            docForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // URL จาก Google Apps Script ที่นายให้มาเป๊ะๆ
+                const scriptURL = 'https://script.google.com/macros/s/AKfycbwaprBpMc7AxmfGxNIY7E4IWZEkhV-k_t3beYyo0FfSmrNY2IB7xhwdwzNu_SrlGBLZ/exec';
                 
-                if(res.status !== 'success') {
-                    throw new Error(res.message);
+                try {
+                    const editIdEl = document.getElementById('editId');
+                    const fromWhoEl = document.getElementById('fromWho');
+                    const toWhoEl = document.getElementById('toWho');
+                    const deptEl = document.getElementById('department');
+                    const docNumEl = document.getElementById('docNumber');
+                    const subjectEl = document.getElementById('subject');
+                    const actionEl = document.getElementById('action');
+                    const dateInputEl = document.getElementById('dateInput');
+                    const timeInputEl = document.getElementById('timeInput');
+                    const seqDisplayEl = document.getElementById('seqDisplay');
+
+                    // จัดเตรียมข้อมูล
+                    const id = (editIdEl && editIdEl.value) ? editIdEl.value : Date.now().toString();
+                    const record = { 
+                        id: id, 
+                        from_who: fromWhoEl ? fromWhoEl.value : '', 
+                        toWho: toWhoEl ? toWhoEl.value : '', 
+                        department: deptEl ? deptEl.value : '', 
+                        doc_number: docNumEl ? docNumEl.value : '', 
+                        subject: subjectEl ? subjectEl.value : '', 
+                        action: actionEl ? actionEl.value : '', 
+                        date: dateInputEl ? dateInputEl.value : '', 
+                        time: timeInputEl ? timeInputEl.value : '', 
+                        sequence: seqDisplayEl ? seqDisplayEl.value : '' 
+                    };
+
+                    // โชว์หน้าต่างโหลดรอ
+                    Swal.fire({
+                        title: 'กำลังเชื่อมต่อฐานข้อมูล...',
+                        text: 'กรุณารอสักครู่',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // ยิงข้อมูลไป Google Sheets
+                    await fetch(scriptURL, {
+                        method: 'POST',
+                        body: JSON.stringify(record)
+                    });
+
+                    // บันทึกลงเครื่องแบบ Local (เผื่อเอาไว้โชว์ปฏิทินแบบเก่า)
+                    if (editIdEl && editIdEl.value) {
+                        const index = db.findIndex(x => x.id === editIdEl.value);
+                        if(index > -1) db[index] = record;
+                    } else {
+                        db.push(record);
+                    }
+                    localStorage.setItem('kmitl_rt_db', JSON.stringify(db));
+
+                    // แจ้งเตือนเมื่อสำเร็จ และกลับหน้าหลัก
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'ออนไลน์สำเร็จ!',
+                        text: 'บันทึกข้อมูลเข้า Google Sheets เรียบร้อย',
+                        timer: 2000
+                    });
+                    
+                    goHome();
+
+                } catch (err) {
+                    console.error('Submit Error: ', err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ผิดพลาด',
+                        text: 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้'
+                    });
                 }
-
-                const idx = db.findIndex(x => String(x.id) === String(id)); 
-                if(idx !== -1) {
-                    db[idx] = record;
-                } else {
-                    db.push(record); 
-                }
-                localStorage.setItem('kmitl_rt_db', JSON.stringify(db));
-
-                Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'บันทึกเข้า Google Sheets เรียบร้อย', timer: 2000 });
-                goHome();
-                
-            } catch (err) {
-                console.error(err);
-                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ' });
-            }
-        });
+            });
+        }
     });
 
     function changeMonth(v) {
@@ -552,7 +689,6 @@
         renderCalendar();
     }
 
-    // 🟢 ระบบส่งออกเป็น Excel ประจำเดือนแบบเต็ม (ครบทุกบรรทัดการสร้างแบบฟอร์ม)
     async function exportCurrentMonthToExcel() {
         try {
             if(typeof ExcelJS === 'undefined' || typeof saveAs === 'undefined') {
@@ -577,146 +713,122 @@
                 if(a.date === b.date) return a.sequence.localeCompare(b.sequence, undefined, {numeric: true});
                 return a.date.localeCompare(b.date);
             });
-            
             if(pastRecords.length > 0) {
                 prevLastSequence = pastRecords[pastRecords.length - 1].sequence;
             }
 
             let lastSheetName = null;
             let lastCellRef = null;
-            let currentTrackingSequence = prevLastSequence; 
+            let currentTrackingSequence = prevLastSequence;
 
             const applyBorders = (cell) => {
-                cell.border = {
-                    top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}
-                };
+                cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             };
 
             for(let i=1; i<=daysInMonth; i++) {
                 const dStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                const sheetName = String(i).padStart(2,'0'); 
+                const sheetName = String(i).padStart(2,'0');
                 const ws = wb.addWorksheet(sheetName);
                 
-                ws.pageSetup = { 
-                    paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, 
-                    margins: { left: 0.25, right: 0.25, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } 
-                };
-
                 ws.columns = [
-                    { width: 10 }, { width: 12 }, { width: 15 }, { width: 10 }, { width: 12 }, { width: 12 },
-                    { width: 15 }, { width: 15 }, { width: 12 }, { width: 45 }, { width: 12 }, { width: 12 },
-                    { width: 15 }, { width: 25 }
+                    { width: 8 }, { width: 12 }, { width: 12 }, { width: 15 },
+                    { width: 12 }, { width: 12 }, { width: 25 }, { width: 25 },
+                    { width: 15 }, { width: 35 }, { width: 20 }, { width: 20 }
                 ];
 
                 const row1 = ws.getRow(1);
-                row1.getCell(1).value = dStr; 
+                row1.height = 30;
+                row1.getCell(1).value = dStr;
                 row1.getCell(1).font = { name: 'TH SarabunPSK', size: 16 };
-                
+
                 const cellM1 = row1.getCell(13);
                 if (lastSheetName && lastCellRef) {
                     cellM1.value = { formula: `='${lastSheetName}'!${lastCellRef}`, result: currentTrackingSequence };
                 } else {
-                    cellM1.value = currentTrackingSequence; 
+                    cellM1.value = currentTrackingSequence;
                 }
-                cellM1.numFmt = '@'; 
+                cellM1.numFmt = '@';
                 cellM1.font = { name: 'TH SarabunPSK', size: 16 };
                 cellM1.alignment = { horizontal: 'right' };
-
+                
                 const cellN1 = row1.getCell(14);
                 cellN1.value = 'เลขสุดท้ายวันทำการก่อนหน้า';
                 cellN1.font = { name: 'TH SarabunPSK', size: 16 };
 
                 const row2 = ws.getRow(2);
-                row2.height = 35; 
+                row2.height = 35;
                 const headers = ['ลำดับที่\nทั่วไป', 'เลขลำดับ\nหนังสือรับ', 'เลขลำดับ\nหนังสือส่ง', 'เลขที่', 'ลงวันที่', 'วันที่\nดำเนินการ', 'จาก', 'ถึง', 'หน่วยรับ', 'เรื่อง', 'การปฏิบัติ', 'หมายเหตุ'];
                 
                 headers.forEach((headerText, index) => {
                     const cell = row2.getCell(index + 1);
                     cell.value = headerText;
-                    cell.font = { name: 'TH SarabunPSK', size: 16, bold: true }; 
+                    cell.font = { name: 'TH SarabunPSK', size: 16, bold: true };
                     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } }; 
                     applyBorders(cell);
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
                 });
 
                 const dayData = db.filter(r => r.date === dStr).sort((a,b) => a.sequence.localeCompare(b.sequence, undefined, {numeric: true}));
-                let dataToRender = dayData.length > 0 ? dayData : [ { isEmpty: true } ];
-                if (dayData.length > 0) hasAnyData = true;
-
                 let lastDataRowIdx = 2;
 
-                dataToRender.forEach((item, index) => {
-                    const rIdx = 3 + index;
-                    const dataRow = ws.getRow(rIdx);
-                    dataRow.height = 25; 
+                if(dayData.length > 0) {
+                    hasAnyData = true;
+                    dayData.forEach((r, idx) => {
+                        const rIdx = idx + 3;
+                        const row = ws.getRow(rIdx);
+                        row.height = 25;
+                        currentTrackingSequence = r.sequence;
 
-                    dataRow.getCell(1).value = index + 1; 
-                    dataRow.getCell(2).value = ''; 
-                    
-                    if (!item.isEmpty) {
-                        const seqCell = dataRow.getCell(3);
-                        seqCell.value = item.sequence;
-                        seqCell.numFmt = '@'; 
-                        
-                        dataRow.getCell(4).value = item.doc_number || ''; 
-                        dataRow.getCell(5).value = item.date; 
-                        dataRow.getCell(6).value = item.date; 
-                        dataRow.getCell(7).value = item.from_who; 
-                        dataRow.getCell(8).value = item.toWho || item.to_who || ''; 
-                        dataRow.getCell(9).value = item.department || ''; 
-                        dataRow.getCell(10).value = item.subject + (item.action ? ` / ${item.action}` : ''); 
-                        dataRow.getCell(11).value = ''; 
-                        dataRow.getCell(12).value = ''; 
+                        const rowData = [
+                            idx + 1, '', r.sequence, r.doc_number || '', r.date, r.date, 
+                            r.from_who || '', r.toWho || '', r.department || '', 
+                            r.subject || '', r.action || '', ''
+                        ];
 
-                        currentTrackingSequence = item.sequence; 
+                        rowData.forEach((val, colIdx) => {
+                            const cell = row.getCell(colIdx + 1);
+                            cell.value = val;
+                            cell.font = { name: 'TH SarabunPSK', size: 16 };
+                            applyBorders(cell);
+                            
+                            if ([1, 2, 3, 5, 6].includes(colIdx + 1)) {
+                                cell.alignment = { vertical: 'top', horizontal: 'center', wrapText: true };
+                            } else {
+                                cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+                            }
+                        });
+                        lastDataRowIdx = rIdx;
+                    });
+
+                    lastSheetName = sheetName;
+                    if (dayData.length > 0) {
+                        lastCellRef = `C${lastDataRowIdx}`; 
                     } else {
-                        dataRow.getCell(3).value = '';
-                        dataRow.getCell(3).numFmt = '@';
+                        lastCellRef = `M1`; 
                     }
-
-                    for(let c=1; c<=12; c++) {
-                        const cell = dataRow.getCell(c);
-                        cell.font = { name: 'TH SarabunPSK', size: 16 };
-                        applyBorders(cell);
-                        
-                        if([1, 2, 3, 4, 5, 6, 9].includes(c)) {
-                            cell.alignment = { vertical: 'top', horizontal: 'center', wrapText: true };
-                        } else {
-                            cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
-                        }
-                    }
-                    lastDataRowIdx = rIdx;
-                });
-
-                lastSheetName = sheetName;
-                if (dayData.length > 0) {
-                    lastCellRef = `C${lastDataRowIdx}`; 
-                } else {
-                    lastCellRef = `M1`; 
                 }
+
+                if(!hasAnyData) {
+                    alert(`ไม่มีข้อมูลในเดือน ${monthNames[month]} ${year + 543} สำหรับส่งออก`);
+                    return;
+                }
+
+                const today = new Date();
+                if(year === today.getFullYear() && month === today.getMonth()) {
+                    wb.views = [ { activeTab: today.getDate() - 1 } ];
+                }
+
+                const buffer = await wb.xlsx.writeBuffer();
+                const fileName = `ออก ${year+543}${String(month+1).padStart(2,'0')} ${monthNames[month]}.xlsx`;
+                
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                saveAs(blob, fileName);
+
+            } catch (err) {
+                console.error('Excel Export Error: ', err);
+                alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel');
             }
-
-            if(!hasAnyData) {
-                alert(`ไม่มีข้อมูลในเดือน ${monthNames[month]} ${year + 543} สำหรับส่งออก`);
-                return;
-            }
-
-            const today = new Date();
-            if(year === today.getFullYear() && month === today.getMonth()) {
-                wb.views = [ { activeTab: today.getDate() - 1 } ];
-            }
-
-            const buffer = await wb.xlsx.writeBuffer();
-            const fileName = `ออก ${year+543}${String(month+1).padStart(2,'0')} ${monthNames[month]}.xlsx`;
-            
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            saveAs(blob, fileName);
-
-        } catch (err) {
-            console.error('Excel Export Error: ', err);
-            alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel');
         }
-    }
-</script>
+    </script>
 </body>
 </html>
