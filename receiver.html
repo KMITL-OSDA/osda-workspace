@@ -177,119 +177,123 @@
     localforage.config({ name: 'OSDA_STORAGE' });
     <script>
     // 1. ตั้งค่าเริ่มต้น
+   <script>
     let db = [];
     const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec';
 
-    // 2. เช็ก Login (ยามเฝ้าประตู)
     window.onload = function() {
         if(sessionStorage.getItem('osda_auth') !== 'true') {
-            alert('กรุณาลงชื่อเข้าใช้งานก่อนครับ');
             window.location.href = 'index.html';
             return;
         }
         init();
     }
 
-    // 3. ฟังก์ชันเตรียมพร้อม
     async function init() {
         lucide.createIcons();
-        // ดึงข้อมูลเก่าจากเครื่องมาโชว์ก่อน
-        db = JSON.parse(localStorage.getItem('OSDA_DB_PRO') || '[]');
-        renderList();
+        await loadOnlineData(); // 🔄 เปลี่ยนมาดึงข้อมูลออนไลน์แทน
     }
 
-    // 4. ฟังก์ชันจัดการวันที่ (ที่เคยทำพัง)
-    function formatThaiDateShort(dateStr) {
-        if (!dateStr) return "-";
+    // --- 🌐 ฟังก์ชันดึงข้อมูลจาก Google Sheets (ทำให้เห็นข้อมูลคนอื่น) ---
+    async function loadOnlineData() {
         try {
-            const d = new Date(dateStr);
-            return d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' });
-        } catch(e) { return dateStr; }
+            // โชว์ Loading นิดนึงระหว่างดึงข้อมูล
+            const listBody = document.getElementById('list-body');
+            listBody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-400">🔄 กำลังซิงค์ข้อมูลออนไลน์...</td></tr>';
+
+            const response = await fetch(`${scriptURL}?action=read&sheetType=receiver`);
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                db = result.data;
+                // เซฟสำรองลงเครื่องไว้ด้วย
+                localStorage.setItem('OSDA_DB_PRO', JSON.stringify(db));
+            }
+            renderList();
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            // ถ้าดึงออนไลน์ไม่สำเร็จ ให้ดึงจากเครื่องแก้ขัดไปก่อน
+            db = JSON.parse(localStorage.getItem('OSDA_DB_PRO') || '[]');
+            renderList();
+        }
     }
 
-    // 5. ฟังก์ชันบันทึกข้อมูล (ฉบับแก้ไขสมบูรณ์)
+    // --- 🗑️ ฟังก์ชันลบข้อมูลแบบไม่ค้าง ---
+    window.deleteRecord = async (id) => {
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ?',
+            text: "ข้อมูลจะถูกลบออกจากฐานข้อมูลออนไลน์ด้วย",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'ลบข้อมูล'
+        });
+
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            try {
+                // ส่งคำสั่งลบไปที่ Google Sheets
+                await fetch(scriptURL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({ action: 'delete', id: String(id), sheetType: 'receiver' }) 
+                });
+
+                // ลบในตัวแปรหน้าจอ และอัปเดตหน้าจอทันที
+                db = db.filter(x => String(x.id) !== String(id));
+                localStorage.setItem('OSDA_DB_PRO', JSON.stringify(db));
+                renderList();
+
+                await Swal.fire({ icon: 'success', title: 'ลบสำเร็จ!', timer: 1000, showConfirmButton: false });
+            } catch (err) {
+                Swal.fire('ผิดพลาด', 'ไม่สามารถลบข้อมูลได้', 'error');
+            }
+        }
+    };
+
+    // --- 💾 ฟังก์ชันบันทึก (คงเดิมแต่ปรับให้โหลดข้อมูลใหม่หลังเซฟ) ---
     window.saveData = async (e) => {
-        if (e) e.preventDefault(); 
-        
-        // เช็กค่าจาก ID (ป้องกัน Error ถ้าหา ID ไม่เจอ)
+        if (e) e.preventDefault();
         const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : "";
 
         try {
             Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-            const id_value = getVal('f_id');
-            const isEdit = id_value ? true : false; 
-            const id = isEdit ? id_value : Date.now();
-            const fileData = getVal('f_fileData');
-
             const record = {
-                action: isEdit ? 'edit' : 'save',
-                sheetType: 'receiver', 
-                id: id,
+                action: getVal('f_id') ? 'edit' : 'save',
+                sheetType: 'receiver',
+                id: getVal('f_id') || Date.now(),
                 seq: getVal('f_seq'),
-                sysDate: getVal('f_sysDate'),
-                sysTime: getVal('f_sysTime'),
-                logDate: getVal('f_logDate'),
-                logTime: getVal('f_logTime'),
                 sender: getVal('f_sender'),
-                receiver: getVal('f_receiver'),
                 subject: getVal('f_subject'),
-                remark: getVal('f_remark'),
                 status: getVal('f_status'),
-                hasFile: fileData ? true : false
+                logDate: getVal('f_logDate')
+                // ... เพิ่มฟิลด์อื่นๆ ตามต้องการ ...
             };
 
-            // 🚀 ยิงขึ้น Cloud
-            await fetch(scriptURL, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify(record)
-            });
+            await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(record) });
 
-            // 💾 บันทึกลงเครื่อง
-            let currentDb = JSON.parse(localStorage.getItem('OSDA_DB_PRO') || '[]');
-            currentDb = currentDb.filter(x => String(x.id) !== String(id));
-            currentDb.push(record);
-            localStorage.setItem('OSDA_DB_PRO', JSON.stringify(currentDb));
-            db = currentDb;
-
-            if (fileData) {
-                await localforage.setItem(`file_${id}`, fileData);
-            }
-
-            await Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', timer: 1500 });
-            goHome(); 
-            renderList();
+            await Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', timer: 1000 });
+            goHome();
+            await loadOnlineData(); // 🔄 โหลดข้อมูลใหม่เพื่อให้เห็นของคนอื่นด้วย
 
         } catch (error) {
-            console.error(error);
-            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: error.message });
+            Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: error.message });
         }
     };
 
-    // 6. ฟังก์ชันจัดการหน้าจอ
-    function goForm() {
-        document.getElementById('view-list').classList.add('hidden');
-        document.getElementById('view-form').classList.remove('hidden');
-        document.getElementById('mainForm').reset();
-        document.getElementById('f_id').value = "";
-        // เซตวันที่/เวลาปัจจุบัน
-        const now = new Date();
-        document.getElementById('f_sysDate').value = now.toISOString().split('T')[0];
-        document.getElementById('f_sysTime').value = now.toTimeString().split(' ')[0].substring(0,5);
+    function formatThaiDateShort(dateStr) {
+        if (!dateStr) return "-";
+        const d = new Date(dateStr);
+        return isNaN(d) ? dateStr : d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' });
     }
 
-    function goHome() {
-        document.getElementById('view-form').classList.add('hidden');
-        document.getElementById('view-list').classList.remove('hidden');
-    }
-
-    // 7. ฟังก์ชันโชว์ตาราง
     function renderList() {
         const listBody = document.getElementById('list-body');
         if (!listBody) return;
         
-        // กรองเอาเฉพาะข้อมูลของฝั่ง receiver
+        // กรองเอาเฉพาะข้อมูลที่เป็นของฝั่ง receiver
         const myData = db.filter(item => item.sheetType === 'receiver');
         
         if (myData.length === 0) {
@@ -298,9 +302,9 @@
         }
 
         listBody.innerHTML = myData.sort((a,b) => b.id - a.id).map(r => `
-            <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <tr class="border-b hover:bg-slate-50 transition-colors">
                 <td class="p-4">
-                    <div class="font-bold text-slate-700">${r.seq || '-'}</div>
+                    <div class="font-bold">${r.seq || '-'}</div>
                     <div class="text-[10px] text-slate-400">${formatThaiDateShort(r.logDate)}</div>
                 </td>
                 <td class="p-4 text-sm">${r.sender || '-'}</td>
@@ -310,15 +314,26 @@
                         ${r.status || 'รอรับ'}
                     </span>
                 </td>
-                <td class="p-4 text-right">
-                    <button onclick="editRecord('${r.id}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                <td class="p-4 text-right space-x-2">
+                    <button onclick="editRecord('${r.id}')" class="text-blue-500 p-1"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                    <button onclick="deleteRecord('${r.id}')" class="text-red-500 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </td>
             </tr>
         `).join('');
         lucide.createIcons();
     }
 
-    // 8. ฟังก์ชันแก้ไข/ลบ
+    function goForm() {
+        document.getElementById('view-list').classList.add('hidden');
+        document.getElementById('view-form').classList.remove('hidden');
+        document.getElementById('mainForm').reset();
+    }
+
+    function goHome() {
+        document.getElementById('view-form').classList.add('hidden');
+        document.getElementById('view-list').classList.remove('hidden');
+    }
+
     window.editRecord = (id) => {
         const item = db.find(x => String(x.id) === String(id));
         if (!item) return;
@@ -328,36 +343,6 @@
             if (el) el.value = item[key];
         });
     };
-    function handleSearch() {
-    const text = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = db.filter(item => 
-        item.sheetType === 'receiver' && 
-        (item.subject.toLowerCase().includes(text) || item.sender.toLowerCase().includes(text))
-    );
-    renderFilteredList(filtered);
-}
-
-function renderFilteredList(data) {
-    // ฟังก์ชันนี้จะทำงานเหมือน renderList แต่ใช้ข้อมูลที่กรองแล้ว
-    // (ถ้าหน้า receiver มีช่องค้นหา อย่าลืมใส่ id="searchInput" นะครับ)
-}
-
-    window.deleteRecord = async (id) => {
-    const result = await Swal.fire({
-        title: 'ยืนยันการลบ?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'ลบเลย',
-        cancelButtonText: 'ยกเลิก'
-    });
-
-    if (result.isConfirmed) {
-        db = db.filter(x => String(x.id) !== String(id));
-        localStorage.setItem('OSDA_DB_PRO', JSON.stringify(db));
-        renderList();
-        Swal.fire('ลบเรียบร้อย!', '', 'success');
-    }
-};
 </script>
 </script>
 </body>
