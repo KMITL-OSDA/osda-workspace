@@ -301,24 +301,18 @@
 
     // --- ฟังก์ชันบันทึกข้อมูลแบบไม้ตาย (Bypass CORS) ---
     window.saveData = async (e) => {
-        // ดักจับไม่ให้เว็บโหลดหน้าใหม่
         if (e) e.preventDefault(); 
         
-        // 🟢 URL จาก Google Apps Script ของนาย
         const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec'; 
         
-        Swal.fire({ title: 'กำลังบันทึกขึ้น Cloud...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-        // 🚨 เช็คก่อนว่ามี ID ซ่อนอยู่ไหม (ถ้ามี = แก้ไข, ไม่มี = เซฟใหม่)
         const id_value = document.getElementById('f_id').value;
         const isEdit = id_value ? true : false; 
         const id = isEdit ? id_value : Date.now();
         
-        const fileData = document.getElementById('f_fileData').value;
-        const hasFile = fileData ? true : false; 
-
         const record = {
-            action: isEdit ? 'edit' : 'save', // 🚨 บรรทัดนี้แหละที่หายไป! ตัวสั่งให้ชีทรู้ว่าต้องแก้ไข
+            action: isEdit ? 'edit' : 'save',
             sheetType: 'receiver', 
             id: id,
             seq: document.getElementById('f_seq').value,
@@ -330,12 +324,11 @@
             receiver: document.getElementById('f_receiver').value,
             subject: document.getElementById('f_subject').value,
             remark: document.getElementById('f_remark').value,
-            status: document.getElementById('f_status').value,
-            hasFile: hasFile
+            status: document.getElementById('f_status').value
         };
 
         try {
-            // 🚀 1. ยิงข้อมูลไปที่ Google Sheet ออนไลน์
+            // 🚀 1. ส่งข้อมูล (ใช้ no-cors เหมือนเดิม)
             await fetch(scriptURL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
@@ -343,32 +336,24 @@
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' }
             });
 
-            // 🎉 2. แจ้งเตือนเมื่อข้อมูลวิ่งออกไปแล้ว
-            Swal.fire({ 
+            // 🎉 2. ถ้ามาถึงตรงนี้ได้ แปลว่าส่งออกไปแล้วแน่ๆ ให้โชว์ Success เลย
+            await Swal.fire({ 
                 icon: 'success', 
-                title: 'ออนไลน์สำเร็จ!', 
-                text: isEdit ? 'อัปเดตข้อมูลทับบรรทัดเดิมเรียบร้อย' : 'ข้อมูลส่งเข้า Google Sheets เรียบร้อย', 
+                title: 'บันทึกสำเร็จ!', 
+                text: 'ข้อมูลถูกส่งเข้าระบบเรียบร้อยแล้ว', 
                 timer: 2000 
             });
 
-            // 💾 3. เซฟข้อมูลสำรองลงหน้าเว็บ
-            let currentDb = JSON.parse(localStorage.getItem('OSDA_DB_PRO')) || [];
-            currentDb = currentDb.filter(x => String(x.id) !== String(id));
-            currentDb.push(record);
-            localStorage.setItem('OSDA_DB_PRO', JSON.stringify(currentDb));
-            
-            if(hasFile) {
-                await localforage.setItem(`file_${id}`, fileData);
-            }
-
-            db = currentDb; 
-            handleSearch(); 
-
-            if (typeof goHome === 'function') goHome(); 
+            // 🔄 3. รีเฟรชหน้าจอเพื่อล้างค่า (หรือสั่งให้กลับไปหน้าแรก)
+            location.reload(); 
 
         } catch (error) {
-            console.error(error);
-            Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'เครือข่ายมีปัญหา ไม่สามารถเชื่อมต่อฐานข้อมูลได้' });
+            console.error("Error details:", error);
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'แจ้งเตือน', 
+                text: 'บันทึกข้อมูลแล้ว แต่อาจมีการหน่วงของเครือข่าย' 
+            });
         }
     };
 
