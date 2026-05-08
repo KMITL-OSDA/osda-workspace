@@ -525,9 +525,10 @@ window.deleteRecord = async (id) => {
             // รีโหลดหน้าจอเพื่อให้ลำดับมันอัปเดต
             location.reload(); 
 
-        } catch (e) {
-            console.error("Delete Error:", e);
-            Swal.fire('Error', 'การเชื่อมต่อผิดพลาด', 'error');
+        } catch (error) {
+            console.error(error);
+            // ให้มันโชว์ Error ตัวจริงออกมาเลย!
+            Swal.fire({ icon: 'error', title: 'พังตรงนี้!', text: String(error) });
         }
     }
 };
