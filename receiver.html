@@ -93,7 +93,7 @@
                         <div class="col-span-2 text-center">จัดการ</div>
                     </div>
                     <div id="recordList" class="flex flex-col divide-y divide-slate-100">
-                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -123,15 +123,15 @@
             
             <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div class="mb-4 text-center">
-    <label class="text-sm font-bold text-slate-600 block mb-2">เลขทะเบียนรับ</label>
-    <div class="flex items-center justify-center gap-2 max-w-md mx-auto">
-        <input type="text" id="f_seq" class="w-full text-center text-3xl font-black text-slate-800 bg-transparent border-b-2 border-slate-300 py-2 outline-none" readonly>
-        
-        <button type="button" id="btnReuseSeq" onclick="checkAndReuseDeletedSeq()" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm transition-all whitespace-nowrap">
-            <i data-lucide="list-restart" class="w-4 h-4"></i> ดึงเลขที่ว่าง
-        </button>
-    </div>
-</div>
+                    <label class="text-sm font-bold text-slate-600 block mb-2">เลขทะเบียนรับ</label>
+                    <div class="flex items-center justify-center gap-2 max-w-md mx-auto">
+                        <input type="text" id="f_seq" class="w-full text-center text-3xl font-black text-slate-800 bg-transparent border-b-2 border-slate-300 py-2 outline-none" readonly>
+                        
+                        <button type="button" id="btnReuseSeq" onclick="checkAndReuseDeletedSeq()" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm transition-all whitespace-nowrap">
+                            <i data-lucide="list-restart" class="w-4 h-4"></i> ดึงเลขที่ว่าง
+                        </button>
+                    </div>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="text-[11px] font-bold text-slate-500 block mb-1 text-center">วันที่บันทึก (System Date)</label>
@@ -194,17 +194,87 @@
 
     const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
 
-   // วางแทนที่ window.onload เดิม
     window.onload = async function() {
         lucide.createIcons();
         await syncDataFromCloud(); 
     }
 
-    // ฟังก์ชันใหม่: ดึงข้อมูลจาก Google Sheets ตอนเปิดเว็บ
+    // ฟังก์ชันเปิดหน้าฟอร์ม (แก้ไขจุดที่ขาดหายไป)
+    window.openForm = (mode) => {
+        currentMode = mode;
+        clearInterval(realTimeClock);
+        
+        document.getElementById('docForm').reset();
+        document.getElementById('f_id').value = '';
+        document.getElementById('f_fileData').value = '';
+        document.getElementById('f_fileStatus').innerText = '';
+        
+        document.getElementById('f_logDate').readOnly = false;
+        document.getElementById('f_logTime').readOnly = false;
+        
+        document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+        document.getElementById('pageForm').classList.add('active');
+        
+        const badge = document.getElementById('formStatusBadge');
+        const statusInput = document.getElementById('f_status');
+        
+        // ช่วยดึงวันที่แบบ Local Timezone ป้องกันบั๊กข้ามวัน
+        const getLocalDateStr = () => {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+
+        if (mode === 'new') {
+            document.getElementById('formTitle').innerText = 'บันทึกรับหนังสือปกติ';
+            statusInput.value = 'รับแล้ว';
+            badge.innerText = 'ปกติ';
+            badge.className = "px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border bg-emerald-100 text-emerald-700 border-emerald-200";
+            
+            const updateClock = () => {
+                const now = new Date();
+                const dStr = getLocalDateStr();
+                const tStr = now.toTimeString().split(' ')[0];
+                
+                document.getElementById('f_sysDate').value = dStr;
+                document.getElementById('f_sysTime').value = tStr;
+                document.getElementById('f_logDate').value = dStr;
+                document.getElementById('f_logTime').value = tStr.substring(0, 5);
+            };
+            updateClock();
+            realTimeClock = setInterval(updateClock, 1000);
+            calculateSequence();
+            
+        } else if (mode === 'backfill') {
+            document.getElementById('formTitle').innerText = 'บันทึกรับหนังสือย้อนหลัง';
+            statusInput.value = 'รับย้อนหลัง';
+            badge.innerText = 'ย้อนหลัง';
+            badge.className = "px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border bg-amber-100 text-amber-700 border-amber-200";
+            
+            const now = new Date();
+            document.getElementById('f_sysDate').value = getLocalDateStr();
+            document.getElementById('f_sysTime').value = now.toTimeString().split(' ')[0];
+            
+            document.getElementById('f_logDate').value = '';
+            document.getElementById('f_logTime').value = '';
+            document.getElementById('f_seq').value = 'กรุณาเลือกวันที่รับจริง';
+        }
+    };
+
+    // ฟังก์ชันกลับหน้าหลัก (แก้ไขจุดที่ขาดหายไป)
+    window.goHome = () => {
+        currentMode = 'hub';
+        clearInterval(realTimeClock);
+        document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+        document.getElementById('pageHub').classList.add('active');
+        syncDataFromCloud(); 
+    };
+
     async function syncDataFromCloud() {
         const container = document.getElementById('recordList');
         if(container) {
-            // โชว์อนิเมชั่นโหลดหมุนๆ เท่ๆ ระหว่างรอเน็ต
             container.innerHTML = `
                 <div class="text-center py-16 text-blue-600 font-bold flex flex-col items-center justify-center gap-3">
                     <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -215,22 +285,20 @@
                 </div>`;
         }
 
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwGPq_pXfIqNU_mxASUidXLb9YPiRkT4B0-m7vsZYMV29ZL6gLEzkbOhKK-jVVK-iwPlg/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec';
 
         try {
-            // สั่งยิงไปถาม Google Sheets (ขอ action=getAll)
             const response = await fetch(`${scriptURL}?action=getAll&sheetType=receiver`);
             const data = await response.json();
             
             if (data.status === 'success' && data.data) {
-                db = data.data; // เอาข้อมูลใหม่ล่าสุดใส่ตาราง
-                localStorage.setItem('OSDA_DB_PRO', JSON.stringify(db)); // อัปเดตลิ้นชักตัวเองด้วย
+                db = data.data; 
+                localStorage.setItem('OSDA_DB_PRO', JSON.stringify(db)); 
             }
         } catch (err) {
             console.error("Sync Error:", err);
-            // ถ้าเน็ตหลุดหรือมีปัญหา มันจะเอาข้อมูลในเครื่อง (ที่เคยเซฟไว้) มาโชว์แทน ไม่พังแน่นอน
         } finally {
-            handleSearch(); // วาดตารางใหม่
+            handleSearch(); 
         }
     }
 
@@ -243,7 +311,7 @@
         const seqEl = document.getElementById('f_seq');
         seqEl.value = "กำลังดึงเลข..."; 
 
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwGPq_pXfIqNU_mxASUidXLb9YPiRkT4B0-m7vsZYMV29ZL6gLEzkbOhKK-jVVK-iwPlg/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec';
 
         try {
             const response = await fetch(`${scriptURL}?action=getSeq&mode=${currentMode}&date=${targetDate}`);
@@ -287,7 +355,7 @@
     window.saveData = async (e) => {
         if (e) e.preventDefault(); 
         
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwGPq_pXfIqNU_mxASUidXLb9YPiRkT4B0-m7vsZYMV29ZL6gLEzkbOhKK-jVVK-iwPlg/exec'; 
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec'; 
 
         const getValue = (id) => {
             const el = document.getElementById(id);
@@ -454,6 +522,15 @@
         document.getElementById('f_logDate').readOnly = true;
         document.getElementById('f_logTime').readOnly = true;
         
+        const badge = document.getElementById('formStatusBadge');
+        if (data.status === 'รับย้อนหลัง') {
+            badge.innerText = 'ย้อนหลัง';
+            badge.className = "px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border bg-amber-100 text-amber-700 border-amber-200";
+        } else {
+            badge.innerText = 'ปกติ';
+            badge.className = "px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border bg-emerald-100 text-emerald-700 border-emerald-200";
+        }
+
         if(data.hasFile) {
             document.getElementById('f_fileStatus').innerText = "📌 มีไฟล์เดิมแนบไว้แล้ว (หากแนบใหม่จะทับของเดิม)";
         } else {
@@ -475,7 +552,7 @@
         if (result.isConfirmed) {
             Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             
-            const scriptURL = 'https://script.google.com/macros/s/AKfycbwGPq_pXfIqNU_mxASUidXLb9YPiRkT4B0-m7vsZYMV29ZL6gLEzkbOhKK-jVVK-iwPlg/exec'; 
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec'; 
             const record = { action: 'delete', id: String(id) };
 
             try {
@@ -500,9 +577,6 @@
         }
     };
 
-    // ==========================================================
-    // 🌟 ฟังก์ชันปุ่มดึงเลขที่ว่าง (ฉบับสมบูรณ์)
-    // ==========================================================
     function checkAndReuseDeletedSeq() {
         let currentDb = JSON.parse(localStorage.getItem('OSDA_DB_PRO') || '[]');
         
