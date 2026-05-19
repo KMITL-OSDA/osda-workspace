@@ -194,65 +194,44 @@
 
     const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
 
-    window.onload = function() {
+   // วางแทนที่ window.onload เดิม
+    window.onload = async function() {
         lucide.createIcons();
-        handleSearch(); 
+        await syncDataFromCloud(); 
     }
 
-    function goHome() {
-        clearInterval(realTimeClock); 
-        document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
-        document.getElementById('pageHub').classList.add('active');
-        currentMode = 'hub';
-        handleSearch(); 
-    }
-
-    function openForm(mode) {
-        clearInterval(realTimeClock);
-        currentMode = mode;
-        
-        document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
-        document.getElementById('pageForm').classList.add('active');
-        document.getElementById('docForm').reset();
-        document.getElementById('f_id').value = '';
-        document.getElementById('f_fileStatus').innerText = '';
-        document.getElementById('f_fileData').value = '';
-        
-        const badge = document.getElementById('formStatusBadge');
-        const logDateInput = document.getElementById('f_logDate');
-        const logTimeInput = document.getElementById('f_logTime');
-
-        if (mode === 'new') {
-            document.getElementById('formTitle').innerText = 'รับหนังสือปกติ';
-            document.getElementById('f_status').value = 'รับแล้ว';
-            badge.innerText = '🔵 รับปกติ';
-            badge.className = 'px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 border-emerald-200';
-            logDateInput.readOnly = true; 
-            logTimeInput.readOnly = true; 
-        } else if (mode === 'backfill') {
-            document.getElementById('formTitle').innerText = 'รับหนังสือย้อนหลัง';
-            document.getElementById('f_status').value = 'รับย้อนหลัง';
-            badge.innerText = '🟡 รับย้อนหลัง';
-            badge.className = 'px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-yellow-100 text-yellow-700 border-yellow-200';
-            logDateInput.readOnly = false; 
-            logTimeInput.readOnly = false; 
+    // ฟังก์ชันใหม่: ดึงข้อมูลจาก Google Sheets ตอนเปิดเว็บ
+    async function syncDataFromCloud() {
+        const container = document.getElementById('recordList');
+        if(container) {
+            // โชว์อนิเมชั่นโหลดหมุนๆ เท่ๆ ระหว่างรอเน็ต
+            container.innerHTML = `
+                <div class="text-center py-16 text-blue-600 font-bold flex flex-col items-center justify-center gap-3">
+                    <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>กำลังซิงก์ข้อมูลล่าสุดจากส่วนกลาง...</span>
+                </div>`;
         }
-        
-        const updateClock = () => {
-            const now = new Date();
-            document.getElementById('f_sysDate').value = now.toISOString().split('T')[0];
-            document.getElementById('f_sysTime').value = now.toTimeString().split(' ')[0]; 
-        };
-        updateClock();
-        realTimeClock = setInterval(updateClock, 1000);
 
-        const now = new Date();
-        if(mode !== 'edit') {
-            logDateInput.value = now.toISOString().split('T')[0]; 
-            logTimeInput.value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwGPq_pXfIqNU_mxASUidXLb9YPiRkT4B0-m7vsZYMV29ZL6gLEzkbOhKK-jVVK-iwPlg/exec';
+
+        try {
+            // สั่งยิงไปถาม Google Sheets (ขอ action=getAll)
+            const response = await fetch(`${scriptURL}?action=getAll&sheetType=receiver`);
+            const data = await response.json();
+            
+            if (data.status === 'success' && data.data) {
+                db = data.data; // เอาข้อมูลใหม่ล่าสุดใส่ตาราง
+                localStorage.setItem('OSDA_DB_PRO', JSON.stringify(db)); // อัปเดตลิ้นชักตัวเองด้วย
+            }
+        } catch (err) {
+            console.error("Sync Error:", err);
+            // ถ้าเน็ตหลุดหรือมีปัญหา มันจะเอาข้อมูลในเครื่อง (ที่เคยเซฟไว้) มาโชว์แทน ไม่พังแน่นอน
+        } finally {
+            handleSearch(); // วาดตารางใหม่
         }
-        calculateSequence();
-        lucide.createIcons();
     }
 
     async function calculateSequence() {
@@ -264,7 +243,7 @@
         const seqEl = document.getElementById('f_seq');
         seqEl.value = "กำลังดึงเลข..."; 
 
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwGPq_pXfIqNU_mxASUidXLb9YPiRkT4B0-m7vsZYMV29ZL6gLEzkbOhKK-jVVK-iwPlg/exec';
 
         try {
             const response = await fetch(`${scriptURL}?action=getSeq&mode=${currentMode}&date=${targetDate}`);
@@ -308,7 +287,7 @@
     window.saveData = async (e) => {
         if (e) e.preventDefault(); 
         
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec'; 
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwGPq_pXfIqNU_mxASUidXLb9YPiRkT4B0-m7vsZYMV29ZL6gLEzkbOhKK-jVVK-iwPlg/exec'; 
 
         const getValue = (id) => {
             const el = document.getElementById(id);
@@ -496,7 +475,7 @@
         if (result.isConfirmed) {
             Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             
-            const scriptURL = 'https://script.google.com/macros/s/AKfycbx5VNfb5zVE84iWVZo_6MR3yPqbdb98HQyomHoSiouoRygpdFv4_8gDmx8IT7yfX4Eu/exec'; 
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbwGPq_pXfIqNU_mxASUidXLb9YPiRkT4B0-m7vsZYMV29ZL6gLEzkbOhKK-jVVK-iwPlg/exec'; 
             const record = { action: 'delete', id: String(id) };
 
             try {
