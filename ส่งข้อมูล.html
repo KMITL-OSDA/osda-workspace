@@ -263,7 +263,15 @@
                 <div class="text-slate-400 text-sm" style="margin: 0 0 12px 0 !important; padding: 0 !important; line-height: 1.5 !important;">เลือกรายการที่ต้องการดำเนินการ</div>
             </div>
 
-            <div class="hub-grid z-10">
+            <div id="syncSpinner" style="display:none; text-align:center; padding: 20px; color: #ea580c; font-weight: bold;">
+                <svg class="animate-spin h-8 w-8 text-orange-500 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                กำลังเชื่อมต่อฐานข้อมูล...
+            </div>
+
+            <div class="hub-grid z-10" id="hubMenuGrid">
                 <div class="hub-card" onclick="openModule('new')">
                     <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center"><i data-lucide="plus-circle"></i></div>
                     <div class="font-bold text-slate-700">บันทึกใหม่</div>
@@ -314,7 +322,16 @@
                             <div><div class="text-xs font-bold text-slate-400 mb-1">ลงวันที่</div><input type="date" id="dateInput" required onchange="calculateSeq()"></div>
                             <div><div class="text-xs font-bold text-slate-400 mb-1">เวลาบันทึก</div><input type="text" id="timeInput" disabled class="bg-slate-50 text-slate-500"></div>
                         </div>
-                        <div><div class="text-xs font-bold text-slate-400 mb-1">เลขลำดับเอกสาร</div><input type="text" id="seqDisplay" disabled class="text-center font-mono font-bold text-orange-600 bg-orange-50/50 rounded-xl border-orange-100"></div>
+                        
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <div class="text-xs font-bold text-slate-400">เลขลำดับเอกสาร</div>
+                                <button type="button" onclick="checkAndReuseDeletedSeq()" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-sm transition-all whitespace-nowrap">
+                                    <i data-lucide="list-restart" class="w-3 h-3"></i> ดึงเลขที่ว่าง
+                                </button>
+                            </div>
+                            <input type="text" id="seqDisplay" disabled class="text-center font-mono font-bold text-orange-600 bg-orange-50/50 rounded-xl border-orange-100">
+                        </div>
                         <button type="submit" class="btn-submit">ยืนยันและบันทึกข้อมูล</button>
                     </form>
                 </div>
@@ -339,7 +356,6 @@
     <script>
 // 🚨 เช็คว่าผ่านการล็อกอินมาจากหน้า index.html หรือยัง
 if (sessionStorage.getItem('osda_auth') !== 'true') {
-    // ถ้ายังไม่ล็อกอิน ให้เตะกลับไปหน้าแรกทันที
     window.location.href = 'index.html';
 }
 
@@ -348,21 +364,81 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
         let viewDate = new Date();
         let selectedDateStr = new Date().toISOString().split('T')[0];
 
-        window.onload = function() {
-            // 🛠️ ปิดการเช็ก Login ชั่วคราว เพื่อให้เปิดหน้าเว็บทดสอบด้วยตัวเองได้เลย
-            /*
-            if (sessionStorage.getItem('osda_auth') !== 'true') {
-                alert('กรุณาลงชื่อเข้าใช้งานก่อนครับ');
-                window.location.href = 'index.html'; 
-            } 
-            */
-            
-            // โหลดไอคอนให้แสดงผล
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwcxNbtUyostusLeyJs5XouTjZR0AG_tI-s3MZQvB33wwqWWdKJsccKV_YED1tZs87F/exec"; 
+
+        window.onload = async function() {
             if(window.lucide) lucide.createIcons();
+            await syncDataFromCloud(); 
         }
 
-        // 🔴 URL ที่เชื่อมต่อกับ Google Apps Script 
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwVV-y5zpeatulw7eFI0dcwjIRzqx87BasCY0ltli-TemQjpNExGuHrEHgdRQDW4OYQ/exec"; 
+        async function syncDataFromCloud() {
+            const spinner = document.getElementById('syncSpinner');
+            const grid = document.getElementById('hubMenuGrid');
+            if(spinner) spinner.style.display = 'block';
+            if(grid) grid.style.display = 'none';
+
+            try {
+                const response = await fetch(`${WEB_APP_URL}?action=getAll&sheetType=sender`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data) {
+                    db = data.data.map(r => ({
+                        id: r.id,
+                        sequence: r.seq,
+                        date: r.logDate,
+                        time: r.logTime,
+                        from_who: r.sender,
+                        to_who: r.receiver,
+                        department: '', 
+                        doc_number: '', 
+                        subject: r.subject,
+                        action: r.remark,
+                        status: r.status
+                    }));
+                    
+                    db.forEach(r => {
+                        let receiverFull = r.to_who || '';
+                        if (receiverFull.includes('(') && receiverFull.includes(')')) {
+                            let match = receiverFull.match(/\(([^)]+)\)$/);
+                            if (match) { 
+                                r.department = match[1]; 
+                                r.to_who = receiverFull.replace(/\([^)]+\)$/, '').trim(); 
+                            }
+                        }
+                        
+                        // 🌟 แก้ไขจุดที่ 1: ระบบดึงข้อมูล รองรับการดึงแบบ \n (ขึ้นบรรทัดใหม่) ป้องกันข้อมูลเพี้ยน
+                        let remarkFull = r.action || '';
+                        if (remarkFull.startsWith('เลขที่:')) {
+                            let splitIndex = remarkFull.indexOf('\n');
+                            if (splitIndex !== -1) {
+                                r.doc_number = remarkFull.substring(7, splitIndex).trim(); // ตัดคำว่า "เลขที่: " ออก
+                                r.action = remarkFull.substring(splitIndex + 1).trim();
+                            } else {
+                                // อันนี้เผื่อเอาไว้อ่านข้อมูลเก่าที่เคยเซฟแบบเว้นวรรค
+                                let matchDoc = remarkFull.match(/^เลขที่:\s*([^\s]+)\s*(.*)$/);
+                                if (matchDoc) {
+                                    r.doc_number = matchDoc[1];
+                                    r.action = matchDoc[2];
+                                }
+                            }
+                        }
+                    });
+
+                    localStorage.setItem('kmitl_rt_db', JSON.stringify(db));
+                }
+            } catch (err) {
+                console.error("Sync Error:", err);
+                db = JSON.parse(localStorage.getItem('kmitl_rt_db') || '[]');
+            } finally {
+                if(spinner) spinner.style.display = 'none';
+                if(grid) grid.style.display = 'grid';
+                
+                if (document.getElementById('listSection').style.display === 'block') {
+                    renderCalendar();
+                    showList(selectedDateStr);
+                }
+            }
+        }
 
         const Toast = Swal.mixin({
             toast: true,
@@ -390,6 +466,7 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
             if(ov) ov.style.display = 'none';
             
             document.getElementById('appModal').style.display = 'none'; 
+            syncDataFromCloud(); 
         }
         
         function switchModule(m) { 
@@ -453,7 +530,7 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                 const mode = (typeof currentMode !== 'undefined' && currentMode === 'new') ? 'new' : 'backfill';
                 const targetDate = dateInputEl.value;
 
-                const response = await fetch(`${WEB_APP_URL}?action=getSeq&sheet=ข้อมูลส่ง&mode=${mode}&date=${targetDate}`);
+                const response = await fetch(`${WEB_APP_URL}?action=getSeq&sheetType=sender&mode=${mode}&date=${targetDate}`);
                 const result = await response.json();
                 
                 if (result.status === "success" && result.seq) {
@@ -466,6 +543,44 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                 const seqDisplayEl = document.getElementById('seqDisplay');
                 if(seqDisplayEl) seqDisplayEl.value = "0001"; 
             }
+        }
+
+        function checkAndReuseDeletedSeq() {
+            let existingSeqs = db.map(item => {
+                let num = parseInt(String(item.sequence).replace(/[^0-9]/g, ''), 10);
+                return isNaN(num) ? null : num;
+            }).filter(num => num !== null);
+
+            if (existingSeqs.length === 0) {
+                Swal.fire({ icon: 'info', title: 'ไม่พบช่องว่าง', text: 'ยังไม่มีเลขที่แหว่งในระบบ' }); return;
+            }
+
+            let maxSeq = Math.max(...existingSeqs);
+            let missingSeqs = [];
+            for (let i = 1; i < maxSeq; i++) {
+                if (!existingSeqs.includes(i)) missingSeqs.push(String(i).padStart(4, '0'));
+            }
+
+            if (missingSeqs.length === 0) {
+                Swal.fire({ icon: 'info', title: 'ข้อมูลต่อเนื่อง', text: 'ลำดับเลขเรียงครบถ้วน ไม่มีเลขที่ว่าง' }); return;
+            }
+
+            let optionsHtml = missingSeqs.map(seq => `<option value="${seq}">ลำดับที่ # ${seq}</option>`).join('');
+
+            Swal.fire({
+                title: 'พบเลขที่ว่าง!',
+                html: `<select id="swal_select_seq" class="w-full p-3 border border-slate-300 rounded-xl font-bold text-center text-lg bg-orange-50">${optionsHtml}</select>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ea580c',
+                confirmButtonText: '✅ นำเลขนี้มาใช้',
+                cancelButtonText: 'ยกเลิก',
+                preConfirm: () => document.getElementById('swal_select_seq').value
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    document.getElementById('seqDisplay').value = result.value;
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -495,50 +610,33 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                         const subjectVal = document.getElementById('subject')?.value || '';
                         const actionVal = document.getElementById('action')?.value || '';
 
-                        const actionType = id ? 'edit' : 'new'; 
+                        const actionType = id ? 'edit' : 'save'; 
                         const finalId = id || Date.now().toString(); 
 
                         const payload = {
                             action: actionType,      
-                            targetSheet: "ข้อมูลส่ง", 
+                            sheetType: 'sender', 
                             seq: seqVal,
                             logDate: dateVal,
                             logTime: timeVal,
                             sender: senderVal,
                             receiver: toWhoVal + (deptVal ? ` (${deptVal})` : ''),
                             subject: subjectVal,
-                            remark: (docNumVal ? `เลขที่: ${docNumVal} ` : '') + actionVal,
+                            
+                            // 🌟 แก้ไขจุดที่ 2: ใช้ \n ในการคั่นระหว่างเลขที่และรายละเอียด ป้องกันการตัดคำพัง
+                            remark: (docNumVal ? `เลขที่: ${docNumVal}\n` : '') + actionVal,
+                            
                             status: (actionType === 'edit') ? 'แก้ไขแล้ว' : ((currentMode === 'new') ? 'ส่งปกติ' : 'ส่งย้อนหลัง'),
                             id: finalId
                         };
 
                         await fetch(WEB_APP_URL, {
                             method: 'POST',
-                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                             body: JSON.stringify(payload)
                         });
 
-                        const record = { 
-                            id: finalId, 
-                            from_who: senderVal, 
-                            to_who: toWhoVal, 
-                            department: deptVal,
-                            doc_number: docNumVal,
-                            subject: subjectVal, 
-                            action: actionVal, 
-                            date: dateVal, 
-                            time: timeVal, 
-                            sequence: seqVal 
-                        };
-                        
-                        if(id) { 
-                            const idx = db.findIndex(x => x.id === id); 
-                            if(idx !== -1) db[idx] = record; 
-                        } else { 
-                            db.push(record); 
-                        }
-                        
-                        localStorage.setItem('kmitl_rt_db', JSON.stringify(db));
+                        await syncDataFromCloud(); 
                         
                         Toast.fire({
                             icon: 'success',
@@ -682,23 +780,21 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                 customClass: {
                     popup: 'rounded-3xl' 
                 }
-            }).then((result) => {
+            }).then(async (result) => {
                 if (result.isConfirmed) {
-                    fetch(WEB_APP_URL, {
+                    Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                    await fetch(WEB_APP_URL, {
                         method: 'POST',
-                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify({
-                            action: 'delete_outgoing', 
-                            targetSheet: "ข้อมูลส่ง",
+                            action: 'delete', 
+                            sheetType: 'sender', 
                             id: String(id)
                         })
                     });
 
-                    db = db.filter(x => x.id !== id); 
-                    localStorage.setItem('kmitl_rt_db', JSON.stringify(db)); 
-                    showList(selectedDateStr); 
-                    renderCalendar(); 
-
+                    await syncDataFromCloud(); 
                     Toast.fire({
                         icon: 'success',
                         title: 'ลบรายการเรียบร้อยแล้ว!'
