@@ -123,9 +123,15 @@
             
             <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div class="mb-4 text-center">
-                    <label class="text-sm font-bold text-slate-600 block mb-2">เลขทะเบียนรับ (อัตโนมัติ)</label>
-                    <input type="text" id="f_seq" class="w-full text-center text-3xl font-black text-slate-800 bg-transparent border-b-2 border-slate-300 py-2 outline-none" readonly>
-                </div>
+    <label class="text-sm font-bold text-slate-600 block mb-2">เลขทะเบียนรับ</label>
+    <div class="flex items-center justify-center gap-2 max-w-md mx-auto">
+        <input type="text" id="f_seq" class="w-full text-center text-3xl font-black text-slate-800 bg-transparent border-b-2 border-slate-300 py-2 outline-none" readonly>
+        
+        <button type="button" id="btnReuseSeq" onclick="checkAndReuseDeletedSeq()" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-black flex items-center gap-1 shadow-sm transition-all whitespace-nowrap">
+            <i data-lucide="list-restart" class="w-4 h-4"></i> ดึงเลขที่ว่าง
+        </button>
+    </div>
+</div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="text-[11px] font-bold text-slate-500 block mb-1 text-center">วันที่บันทึก (System Date)</label>
@@ -174,11 +180,9 @@
 </div>
 
 <script>
-    // 🚨 เช็คว่าผ่านการล็อกอินมาจากหน้า index.html หรือยัง
-if (sessionStorage.getItem('osda_auth') !== 'true') {
-    // ถ้ายังไม่ล็อกอิน ให้เตะกลับไปหน้าแรกทันที
-    window.location.href = 'index.html';
-}
+    if (sessionStorage.getItem('osda_auth') !== 'true') {
+        window.location.href = 'index.html';
+    }
 
     localforage.config({ name: 'OSDA_STORAGE' });
     let db = JSON.parse(localStorage.getItem('OSDA_DB_PRO') || '[]');
@@ -191,16 +195,6 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
     const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
 
     window.onload = function() {
-        // 🛠️ 1. ปิดส่วนที่เตะผู้ใช้กลับหน้า index.html (Comment ไว้)
-        /*
-        if (sessionStorage.getItem('osda_auth') !== 'true') {
-            alert('กรุณาลงชื่อเข้าใช้งานก่อนครับ');
-            window.location.href = 'index.html'; 
-            return;
-        } 
-        */
-
-        // 🛠️ 2. สั่งให้โปรแกรมดึงข้อมูลมาวาดตารางทันทีที่เปิดเว็บ
         lucide.createIcons();
         handleSearch(); 
     }
@@ -526,6 +520,58 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
             }
         }
     };
+
+    // ==========================================================
+    // 🌟 ฟังก์ชันปุ่มดึงเลขที่ว่าง (ฉบับสมบูรณ์)
+    // ==========================================================
+    function checkAndReuseDeletedSeq() {
+        let currentDb = JSON.parse(localStorage.getItem('OSDA_DB_PRO') || '[]');
+        
+        let existingSeqs = currentDb.map(item => {
+            let num = parseInt(String(item.seq).replace(/[^0-9]/g, ''), 10);
+            return isNaN(num) ? null : num;
+        }).filter(num => num !== null);
+
+        if (existingSeqs.length === 0) {
+            Swal.fire({ icon: 'info', title: 'ไม่พบช่องว่าง', text: 'ปัจจุบันยังไม่มีเลขทะเบียนที่แหว่งในระบบครับ' });
+            return;
+        }
+
+        let maxSeq = Math.max(...existingSeqs);
+        let missingSeqs = [];
+        for (let i = 1; i < maxSeq; i++) {
+            if (!existingSeqs.includes(i)) {
+                missingSeqs.push(String(i).padStart(4, '0'));
+            }
+        }
+
+        if (missingSeqs.length === 0) {
+            Swal.fire({ icon: 'info', title: 'ข้อมูลต่อเนื่องดีอยู่', text: 'ลำดับเลขทะเบียนเรียงครบถ้วน ไม่มีเลขที่ว่างครับ' });
+            return;
+        }
+
+        let optionsHtml = missingSeqs.map(seq => `<option value="${seq}">ลำดับที่ # ${seq}</option>`).join('');
+
+        Swal.fire({
+            title: 'พบเลขทะเบียนที่ว่างอยู่!',
+            html: `
+                <p class="text-sm text-slate-500 mb-3">คุณสามารถเลือกดึงเลขทะเบียนที่เคยโดนลบไป กลับมาใช้ใหม่ได้ครับ</p>
+                <select id="swal_select_seq" class="w-full p-3 border border-slate-300 rounded-xl font-bold text-center text-lg text-slate-800 bg-amber-50">
+                    ${optionsHtml}
+                </select>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d97706',
+            confirmButtonText: '✅ ตกลง นำเลขนี้มาใช้',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => { return document.getElementById('swal_select_seq').value; }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                document.getElementById('f_seq').value = result.value;
+            }
+        });
+    }
 </script>
 </body>
 </html>
