@@ -976,6 +976,53 @@
                 alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel');
             }
         }
+        // 🌟 ระบบ Auto-Sync: แอบดึงข้อมูลจาก Cloud ทุกๆ 15 วินาทีแบบเงียบๆ
+        setInterval(async () => {
+            try {
+                // ยิง API เช็คข้อมูลใหม่
+                const response = await fetch(`${WEB_APP_URL}?action=getAll&sheetType=sender`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data) {
+                    let newDb = data.data.map(r => ({
+                        id: r.id, sequence: r.seq, date: r.logDate, time: r.logTime,
+                        from_who: r.sender, to_who: r.receiver, department: '', doc_number: '', 
+                        subject: r.subject, action: r.remark, status: r.status
+                    }));
+                    
+                    newDb.forEach(r => {
+                        let receiverFull = r.to_who || '';
+                        if (receiverFull.includes('(') && receiverFull.includes(')')) {
+                            let match = receiverFull.match(/\(([^)]+)\)$/);
+                            if (match) { r.department = match[1]; r.to_who = receiverFull.replace(/\([^)]+\)$/, '').trim(); }
+                        }
+                        let remarkFull = r.action || '';
+                        if (remarkFull.startsWith('เลขที่:')) {
+                            let splitIndex = remarkFull.indexOf('\n');
+                            if (splitIndex !== -1) {
+                                r.doc_number = remarkFull.substring(7, splitIndex).trim(); 
+                                r.action = remarkFull.substring(splitIndex + 1).trim();
+                            } else {
+                                let matchDoc = remarkFull.match(/^เลขที่:\s*([^\s]+)\s*(.*)$/);
+                                if (matchDoc) { r.doc_number = matchDoc[1]; r.action = matchDoc[2]; }
+                            }
+                        }
+                    });
+
+                    // อัปเดตข้อมูลในเครื่อง
+                    db = newDb;
+                    localStorage.setItem('kmitl_rt_db', JSON.stringify(db));
+
+                    // ถ้าผู้ใช้กำลังยืนมองหน้าปฏิทินอยู่ ให้รีเฟรชตารางและจุดสีส้มทันที!
+                    if (document.getElementById('listSection').style.display === 'block') {
+                        renderCalendar();
+                        showList(selectedDateStr);
+                    }
+                }
+            } catch(e) {
+                // ถ้าเน็ตหลุดตอนแอบดึงข้อมูล ก็ปล่อยผ่านเงียบๆ ไม่ต้องเด้ง Error กวนใจ
+            }
+        }, 5000); // (ปรับเลขได้ตามต้องการ)
     </script>
 </body>
 </html>
