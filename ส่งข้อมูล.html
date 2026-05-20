@@ -354,17 +354,17 @@
 </div> 
 
     <script>
-// 🚨 เช็คว่าผ่านการล็อกอินมาจากหน้า index.html หรือยัง
-if (sessionStorage.getItem('osda_auth') !== 'true') {
-    window.location.href = 'index.html';
-}
+        // 🚨 เช็คว่าผ่านการล็อกอินมาจากหน้า index.html หรือยัง
+        if (sessionStorage.getItem('osda_auth') !== 'true') {
+            window.location.href = 'index.html';
+        }
 
         let db = JSON.parse(localStorage.getItem('kmitl_rt_db') || '[]');
         let currentMode = ''; 
         let viewDate = new Date();
         let selectedDateStr = new Date().toISOString().split('T')[0];
 
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwcxNbtUyostusLeyJs5XouTjZR0AG_tI-s3MZQvB33wwqWWdKJsccKV_YED1tZs87F/exec"; 
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbypC2yKZwktMJuRym4W8HrpzdQT0RrHBbIhB2jhEfZjE31CfMxETkdrZPuJDYezcq3w/exec"; 
 
         window.onload = async function() {
             if(window.lucide) lucide.createIcons();
@@ -406,15 +406,14 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                             }
                         }
                         
-                        // 🌟 แก้ไขจุดที่ 1: ระบบดึงข้อมูล รองรับการดึงแบบ \n (ขึ้นบรรทัดใหม่) ป้องกันข้อมูลเพี้ยน
+                        // 🌟 ระบบดึงข้อมูล รองรับการดึงแบบ \n (ขึ้นบรรทัดใหม่)
                         let remarkFull = r.action || '';
                         if (remarkFull.startsWith('เลขที่:')) {
                             let splitIndex = remarkFull.indexOf('\n');
                             if (splitIndex !== -1) {
-                                r.doc_number = remarkFull.substring(7, splitIndex).trim(); // ตัดคำว่า "เลขที่: " ออก
+                                r.doc_number = remarkFull.substring(7, splitIndex).trim(); 
                                 r.action = remarkFull.substring(splitIndex + 1).trim();
                             } else {
-                                // อันนี้เผื่อเอาไว้อ่านข้อมูลเก่าที่เคยเซฟแบบเว้นวรรค
                                 let matchDoc = remarkFull.match(/^เลขที่:\s*([^\s]+)\s*(.*)$/);
                                 if (matchDoc) {
                                     r.doc_number = matchDoc[1];
@@ -593,6 +592,18 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                     
                     const btnSubmit = document.querySelector('.btn-submit');
                     const originalText = btnSubmit ? btnSubmit.innerText : 'บันทึก';
+                    
+                    // 🌟 Validation: เช็คว่าห้ามว่าง (เผื่อกรณีระบบรันเลขมีปัญหา หรือมีคนพยายามลบแก้เลข)
+                    const seqVal = document.getElementById('seqDisplay')?.value;
+                    if (!seqVal || seqVal === "⏳ กำลังรันเลข...") {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'รอสักครู่!',
+                            text: 'ระบบกำลังดึงเลขลำดับเอกสาร กรุณารอสักครู่แล้วกดบันทึกใหม่ครับ'
+                        });
+                        return;
+                    }
+
                     if(btnSubmit) {
                         btnSubmit.innerText = 'กำลังบันทึกข้อมูล... ⏳';
                         btnSubmit.disabled = true;
@@ -600,7 +611,6 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
 
                     try {
                         const id = document.getElementById('editId')?.value || '';
-                        const seqVal = document.getElementById('seqDisplay')?.value || '0001';
                         const dateVal = document.getElementById('dateInput')?.value || '';
                         const timeVal = document.getElementById('timeInput')?.value || '';
                         const senderVal = document.getElementById('fromWho')?.value || '';
@@ -622,10 +632,8 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                             sender: senderVal,
                             receiver: toWhoVal + (deptVal ? ` (${deptVal})` : ''),
                             subject: subjectVal,
-                            
-                            // 🌟 แก้ไขจุดที่ 2: ใช้ \n ในการคั่นระหว่างเลขที่และรายละเอียด ป้องกันการตัดคำพัง
+                            // 🌟 ใช้ \n ในการคั่นระหว่างเลขที่และรายละเอียด ป้องกันการตัดคำพัง
                             remark: (docNumVal ? `เลขที่: ${docNumVal}\n` : '') + actionVal,
-                            
                             status: (actionType === 'edit') ? 'แก้ไขแล้ว' : ((currentMode === 'new') ? 'ส่งปกติ' : 'ส่งย้อนหลัง'),
                             id: finalId
                         };
@@ -676,7 +684,7 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                 const docForm = document.getElementById('docForm');
                 if(docForm) docForm.reset();
                 
-                ['editId', 'department', 'docNumber'].forEach(id => {
+                ['editId', 'department', 'docNumber', 'seqDisplay'].forEach(id => {
                     const el = document.getElementById(id);
                     if(el) el.value = '';
                 });
@@ -720,7 +728,8 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                 const container = document.getElementById('dataList');
                 if(!container) return;
                 
-                const filtered = db.filter(r => r.date === d).sort((a,b) => b.sequence.localeCompare(a.sequence, undefined, {numeric: true}));
+                // 🌟 ปรับปรุงการเรียงลำดับรายการในหน้าปฏิทิน: อิงตามค่า ID เพื่อให้รายการใหม่ที่เพิ่งแอดแสดงอยู่บนสุดเสมอ
+                const filtered = db.filter(r => r.date === d).sort((a,b) => b.id - a.id);
                 container.innerHTML = filtered.length ? '' : '<div class="text-center py-10 text-slate-300">ไม่มีข้อมูล</div>';
                 filtered.forEach(r => {
                     const card = document.createElement('div'); card.className = 'doc-card';
@@ -769,36 +778,45 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
         
         window.deleteItem = (id) => { 
             Swal.fire({
-                title: 'ยืนยันการลบ?',
-                text: "คุณต้องการยกเลิกและลบรายการนี้ใช่หรือไม่?",
+                title: 'ยืนยันการลบทิ้งถาวร?',
+                html: "<span class='text-red-500 font-bold'>ข้อมูลรายการนี้จะถูกล้างออกจากระบบ (Google Sheets)!</span><br><br>หากลบไปแล้ว ท่านสามารถดึงเลขลำดับนี้กลับมาใช้ใหม่ได้ โดยการกดปุ่ม 'ดึงเลขที่ว่าง'",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ea580c', 
                 cancelButtonColor: '#94a3b8',
-                confirmButtonText: 'ใช่, ลบเลย!',
-                cancelButtonText: 'ปิด',
+                confirmButtonText: 'ใช่, ลบทิ้งถาวร!',
+                cancelButtonText: 'ยกเลิก',
                 customClass: {
                     popup: 'rounded-3xl' 
                 }
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    Swal.fire({ title: 'กำลังลบข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-                    await fetch(WEB_APP_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({
-                            action: 'delete', 
-                            sheetType: 'sender', 
-                            id: String(id)
-                        })
-                    });
+                    try {
+                        await fetch(WEB_APP_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({
+                                action: 'delete', 
+                                sheetType: 'sender', 
+                                id: String(id)
+                            })
+                        });
 
-                    await syncDataFromCloud(); 
-                    Toast.fire({
-                        icon: 'success',
-                        title: 'ลบรายการเรียบร้อยแล้ว!'
-                    });
+                        await syncDataFromCloud(); 
+                        
+                        // 🌟 รีเรนเดอร์ UI บนเบราว์เซอร์ให้สอดคล้องกันทันทีโดยไม่ต้อง Refresh หน้า
+                        renderCalendar();
+                        showList(selectedDateStr);
+
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'ลบรายการเรียบร้อยแล้ว!'
+                        });
+                    } catch (error) {
+                        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่', 'error');
+                    }
                 }
             });
         };
@@ -825,7 +843,7 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                 let prevLastSequence = "";
                 const firstDayOfMonthStr = `${year}-${String(month+1).padStart(2,'0')}-01`;
                 const pastRecords = db.filter(r => r.date < firstDayOfMonthStr).sort((a,b) => {
-                    if(a.date === b.date) return a.sequence.localeCompare(b.sequence, undefined, {numeric: true});
+                    if(a.date === b.date) return a.id - b.id;
                     return a.date.localeCompare(b.date);
                 });
                 if(pastRecords.length > 0) {
@@ -887,7 +905,8 @@ if (sessionStorage.getItem('osda_auth') !== 'true') {
                         applyBorders(cell);
                     });
 
-                    const dayData = db.filter(r => r.date === dStr).sort((a,b) => a.sequence.localeCompare(b.sequence, undefined, {numeric: true}));
+                    // 🌟 ปรับปรุงการจัดเรียงในแผ่นงานส่งออก Excel: อิงตามค่า ID เพื่อคงลำดับการสร้างจริงไว้
+                    const dayData = db.filter(r => r.date === dStr).sort((a,b) => a.id - b.id);
                     let dataToRender = dayData.length > 0 ? dayData : [ { isEmpty: true } ];
                     if (dayData.length > 0) hasAnyData = true;
                     let lastDataRowIdx = 2;
