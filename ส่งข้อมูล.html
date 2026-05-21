@@ -180,7 +180,7 @@
         .doc-card { 
             background: white; border-radius: 20px; padding: 18px; margin-bottom: 14px; 
             border: 1px solid #ffffff; border-left: 5px solid var(--kmitl-orange); 
-            box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03); transition: all 0.2s ease;
+            box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03) ; transition: all 0.2s ease;
         }
         .doc-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -4px rgba(0,0,0,0.05); }
         
@@ -250,15 +250,13 @@
         </div>
 
         <div id="hubPage" class="hub-container">
-        
             <button onclick="window.location.href='index.html'" 
-        class="mb-4 flex items-center gap-2 text-gray-500 hover:text-orange-600 transition-colors font-medium">
-    <i data-lucide="arrow-left" class="w-5 h-5"></i>
-    ย้อนกลับหน้าเลือกเมนู
-</button>
+                    class="mb-4 flex items-center gap-2 text-gray-500 hover:text-orange-600 transition-colors font-medium">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                ย้อนกลับหน้าเลือกเมนู
+            </button>
             <div class="hub-header-box">
                 <div class="logo-text-osda" style="font-size: 42px !important; line-height: 1 !important; margin: 0 0 5px 0 !important; padding: 0 !important; letter-spacing: -1px !important;">OSDA</div>
-            
                 <div class="text-2xl font-black text-slate-800 tracking-tight" style="margin: 0 0 5px 0 !important; padding: 0 !important; line-height: 1.2 !important;">DOCS SYSTEM</div>
                 <div class="text-slate-400 text-sm" style="margin: 0 0 12px 0 !important; padding: 0 !important; line-height: 1.5 !important;">เลือกรายการที่ต้องการดำเนินการ</div>
             </div>
@@ -354,9 +352,41 @@
 </div> 
 
     <script>
-        // 🚨 เช็คว่าผ่านการล็อกอินมาจากหน้า index.html หรือยัง
-        if (sessionStorage.getItem('osda_auth') !== 'true') {
+        // 🚨 ระบบ Bypass เพื่อเปิดไฟล์ตรงในคอมของนายเพื่อความสะดวกตอนเทสต์
+        const isLocalFile = window.location.protocol === 'file:';
+        if (!isLocalFile && sessionStorage.getItem('osda_auth') !== 'true') {
             window.location.href = 'index.html';
+        }
+
+        // 🌟 ดักป๊อปอัปถามอีเมลผู้ใช้ และล็อกให้กรอกเฉพาะ @kmitl.ac.th เท่านั้น
+        async function checkUserEmail() {
+            if (!sessionStorage.getItem('osda_user')) {
+                const { value: email } = await Swal.fire({
+                    title: 'ระบุตัวตนผู้ใช้ระบบ',
+                    text: 'กรุณากรอกอีเมลสถาบันของคุณ (@kmitl.ac.th) เพื่อใช้อ้างอิงประวัติ',
+                    input: 'email',
+                    inputPlaceholder: 'yourname@kmitl.ac.th',
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#ea580c',
+                    allowOutsideClick: false, // บังคับให้ต้องกรอก ป้องกันคนกดปิด
+                    allowEscapeKey: false,
+                    customClass: {
+                        popup: 'rounded-3xl'
+                    },
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'กรุณาระบุอีเมลก่อนใช้งานระบบ!';
+                        }
+                        const kmitlEmailPattern = /^[a-zA-Z0-9._%+-]+@([a-zA-Z0-9.-]+\.)?kmitl\.ac\.th$/i;
+                        if (!kmitlEmailPattern.test(value.trim())) {
+                            return 'อนุญาตเฉพาะอีเมลสถาบัน (@kmitl.ac.th) เท่านั้นครับ!';
+                        }
+                    }
+                });
+                if (email) {
+                    sessionStorage.setItem('osda_user', email.toLowerCase().trim());
+                }
+            }
         }
 
         let db = JSON.parse(localStorage.getItem('kmitl_rt_db') || '[]');
@@ -364,11 +394,61 @@
         let viewDate = new Date();
         let selectedDateStr = new Date().toISOString().split('T')[0];
 
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbypC2yKZwktMJuRym4W8HrpzdQT0RrHBbIhB2jhEfZjE31CfMxETkdrZPuJDYezcq3w/exec"; 
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyZksp8V17XAPFRRKR162ZvuC7YTu4NZ6BydxpfUx8mOBcQL5RJ37rg09HdeFts5Cw1/exec"; 
 
         window.onload = async function() {
             if(window.lucide) lucide.createIcons();
+            sessionStorage.removeItem('osda_user'); // 🌟 เคลียร์ประวัติจำเมลเก่าทันทีเมื่อโหลดใหม่ เพื่อให้ป๊อปอัปถามใหม่เสมอทุกครั้งที่รันหน้านี้
+            await checkUserEmail(); // เรียกใช้ป๊อปอัปดักถามอีเมล
             await syncDataFromCloud(); 
+        }
+
+        // 🌟 โครงสร้างร่วมสำหรับแปลงข้อมูลจาก API ให้อยู่ในรูปแบบเดียวกัน ป้องกันหน้าจอกระพริบวิบวับรอบ Auto-Sync 5 วินาที
+        function mapApiResponse(apiData) {
+            return apiData.map(r => {
+                let mapped = {
+                    id: String(r.id),
+                    sequence: String(r.seq || ''),
+                    date: String(r.logDate || ''),
+                    time: String(r.logTime || ''),
+                    from_who: String(r.sender || ''),
+                    to_who: String(r.receiver || ''),
+                    department: '',
+                    doc_number: '',
+                    subject: String(r.subject || ''),
+                    action: String(r.remark || ''),
+                    status: String(r.status || ''),
+                    creator: String(r.creator || ''),
+                    editor: String(r.editor || '')
+                };
+
+                // แยกหน่วยงาน
+                let receiverFull = mapped.to_who;
+                if (receiverFull.includes('(') && receiverFull.includes(')')) {
+                    let match = receiverFull.match(/\(([^)]+)\)$/);
+                    if (match) {
+                        mapped.department = match[1];
+                        mapped.to_who = receiverFull.replace(/\([^)]+\)$/, '').trim();
+                    }
+                }
+
+                // แยกเลขที่หนังสือ
+                let remarkFull = mapped.action;
+                if (remarkFull.startsWith('เลขที่:')) {
+                    let splitIndex = remarkFull.indexOf('\n');
+                    if (splitIndex !== -1) {
+                        mapped.doc_number = remarkFull.substring(7, splitIndex).trim();
+                        mapped.action = remarkFull.substring(splitIndex + 1).trim();
+                    } else {
+                        let matchDoc = remarkFull.match(/^เลขที่:\s*([^\s]+)\s*(.*)$/);
+                        if (matchDoc) {
+                            mapped.doc_number = matchDoc[1];
+                            mapped.action = matchDoc[2];
+                        }
+                    }
+                }
+                return mapped;
+            });
         }
 
         async function syncDataFromCloud() {
@@ -382,47 +462,7 @@
                 const data = await response.json();
                 
                 if (data.status === 'success' && data.data) {
-                    db = data.data.map(r => ({
-                        id: r.id,
-                        sequence: r.seq,
-                        date: r.logDate,
-                        time: r.logTime,
-                        from_who: r.sender,
-                        to_who: r.receiver,
-                        department: '', 
-                        doc_number: '', 
-                        subject: r.subject,
-                        action: r.remark,
-                        status: r.status
-                    }));
-                    
-                    db.forEach(r => {
-                        let receiverFull = r.to_who || '';
-                        if (receiverFull.includes('(') && receiverFull.includes(')')) {
-                            let match = receiverFull.match(/\(([^)]+)\)$/);
-                            if (match) { 
-                                r.department = match[1]; 
-                                r.to_who = receiverFull.replace(/\([^)]+\)$/, '').trim(); 
-                            }
-                        }
-                        
-                        // 🌟 ระบบดึงข้อมูล รองรับการดึงแบบ \n (ขึ้นบรรทัดใหม่)
-                        let remarkFull = r.action || '';
-                        if (remarkFull.startsWith('เลขที่:')) {
-                            let splitIndex = remarkFull.indexOf('\n');
-                            if (splitIndex !== -1) {
-                                r.doc_number = remarkFull.substring(7, splitIndex).trim(); 
-                                r.action = remarkFull.substring(splitIndex + 1).trim();
-                            } else {
-                                let matchDoc = remarkFull.match(/^เลขที่:\s*([^\s]+)\s*(.*)$/);
-                                if (matchDoc) {
-                                    r.doc_number = matchDoc[1];
-                                    r.action = matchDoc[2];
-                                }
-                            }
-                        }
-                    });
-
+                    db = mapApiResponse(data.data);
                     localStorage.setItem('kmitl_rt_db', JSON.stringify(db));
                 }
             } catch (err) {
@@ -593,7 +633,6 @@
                     const btnSubmit = document.querySelector('.btn-submit');
                     const originalText = btnSubmit ? btnSubmit.innerText : 'บันทึก';
                     
-                    // 🌟 Validation: เช็คว่าห้ามว่าง (เผื่อกรณีระบบรันเลขมีปัญหา หรือมีคนพยายามลบแก้เลข)
                     const seqVal = document.getElementById('seqDisplay')?.value;
                     if (!seqVal || seqVal === "⏳ กำลังรันเลข...") {
                         Swal.fire({
@@ -632,10 +671,10 @@
                             sender: senderVal,
                             receiver: toWhoVal + (deptVal ? ` (${deptVal})` : ''),
                             subject: subjectVal,
-                            // 🌟 ใช้ \n ในการคั่นระหว่างเลขที่และรายละเอียด ป้องกันการตัดคำพัง
                             remark: (docNumVal ? `เลขที่: ${docNumVal}\n` : '') + actionVal,
                             status: (actionType === 'edit') ? 'แก้ไขแล้ว' : ((currentMode === 'new') ? 'ส่งปกติ' : 'ส่งย้อนหลัง'),
-                            id: finalId
+                            id: finalId,
+                            user: sessionStorage.getItem('osda_user') || 'ไม่ระบุตัวตน' 
                         };
 
                         await fetch(WEB_APP_URL, {
@@ -728,12 +767,17 @@
                 const container = document.getElementById('dataList');
                 if(!container) return;
                 
-                // 🌟 ปรับปรุงการเรียงลำดับรายการในหน้าปฏิทิน: อิงตามค่า ID เพื่อให้รายการใหม่ที่เพิ่งแอดแสดงอยู่บนสุดเสมอ
                 const filtered = db.filter(r => r.date === d).sort((a,b) => b.id - a.id);
                 container.innerHTML = filtered.length ? '' : '<div class="text-center py-10 text-slate-300">ไม่มีข้อมูล</div>';
                 filtered.forEach(r => {
+                    let auditText = `บันทึกโดย: <b>${r.creator || 'ไม่ระบุ'}</b>`;
+                    if (r.editor && r.editor !== r.creator) {
+                        auditText += ` <span class="text-orange-500 ml-1 font-bold">(แก้ไขโดย: ${r.editor})</span>`;
+                    }
+                    let auditHtml = `<div class="text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-100/50">${auditText}</div>`;
+
                     const card = document.createElement('div'); card.className = 'doc-card';
-                    card.innerHTML = `<div class="flex justify-between items-start mb-2"><div class="text-xs font-mono font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">${r.sequence}</div><button onclick="${currentMode==='edit'?`editItem('${r.id}')`:`deleteItem('${r.id}')`}" class="${currentMode==='edit'?'bg-orange-500':'bg-red-500'} text-white px-3 py-1 rounded-lg text-xs border-none cursor-pointer hover:opacity-80">${currentMode==='edit'?'แก้ไข':'ลบ'}</button></div><div class="text-sm font-bold text-slate-700">${r.subject}</div><div class="text-[10px] text-slate-400 mt-2 flex justify-between italic bg-slate-50 p-1 rounded"><div>${r.time}</div><div>${r.from_who} → ${r.to_who} ${r.department ? `(${r.department})` : ''}</div></div>`;
+                    card.innerHTML = `<div class="flex justify-between items-start mb-2"><div class="text-xs font-mono font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">${r.sequence}</div><button onclick="${currentMode==='edit'?`editItem('${r.id}')`:`deleteItem('${r.id}')`}" class="${currentMode==='edit'?'bg-orange-500':'bg-red-500'} text-white px-3 py-1 rounded-lg text-xs border-none cursor-pointer hover:opacity-80">${currentMode==='edit'?'แก้ไข':'ลบ'}</button></div><div class="text-sm font-bold text-slate-700">${r.subject}</div><div class="text-[11px] text-slate-500 mt-2 flex justify-between italic bg-slate-50 p-1 rounded"><div>${r.time}</div><div>${r.from_who} → ${r.to_who} ${r.department ? `(${r.department})` : ''}</div></div>${auditHtml}`;
                     container.appendChild(card);
                 });
                 if(window.lucide) lucide.createIcons();
@@ -791,7 +835,7 @@
                 }
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    Swal.fire({ title: 'กำลังลบข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
                     try {
                         await fetch(WEB_APP_URL, {
@@ -805,8 +849,6 @@
                         });
 
                         await syncDataFromCloud(); 
-                        
-                        // 🌟 รีเรนเดอร์ UI บนเบราว์เซอร์ให้สอดคล้องกันทันทีโดยไม่ต้อง Refresh หน้า
                         renderCalendar();
                         showList(selectedDateStr);
 
@@ -905,7 +947,6 @@
                         applyBorders(cell);
                     });
 
-                    // 🌟 ปรับปรุงการจัดเรียงในแผ่นงานส่งออก Excel: อิงตามค่า ID เพื่อคงลำดับการสร้างจริงไว้
                     const dayData = db.filter(r => r.date === dStr).sort((a,b) => a.id - b.id);
                     let dataToRender = dayData.length > 0 ? dayData : [ { isEmpty: true } ];
                     if (dayData.length > 0) hasAnyData = true;
@@ -976,53 +1017,33 @@
                 alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel');
             }
         }
-        // 🌟 ระบบ Auto-Sync: แอบดึงข้อมูลจาก Cloud ทุกๆ 15 วินาทีแบบเงียบๆ
+
+        // 🌟 ระบบ Auto-Sync: แอบดึงข้อมูลจาก Cloud ทุกๆ 5 วินาทีแบบเงียบๆ (5000ms)
         setInterval(async () => {
             try {
-                // ยิง API เช็คข้อมูลใหม่
+                if (document.getElementById('syncSpinner').style.display === 'block' || 
+                    document.getElementById('formSection').style.display === 'block') {
+                    return;
+                }
+
                 const response = await fetch(`${WEB_APP_URL}?action=getAll&sheetType=sender`);
                 const data = await response.json();
                 
                 if (data.status === 'success' && data.data) {
-                    let newDb = data.data.map(r => ({
-                        id: r.id, sequence: r.seq, date: r.logDate, time: r.logTime,
-                        from_who: r.sender, to_who: r.receiver, department: '', doc_number: '', 
-                        subject: r.subject, action: r.remark, status: r.status
-                    }));
-                    
-                    newDb.forEach(r => {
-                        let receiverFull = r.to_who || '';
-                        if (receiverFull.includes('(') && receiverFull.includes(')')) {
-                            let match = receiverFull.match(/\(([^)]+)\)$/);
-                            if (match) { r.department = match[1]; r.to_who = receiverFull.replace(/\([^)]+\)$/, '').trim(); }
-                        }
-                        let remarkFull = r.action || '';
-                        if (remarkFull.startsWith('เลขที่:')) {
-                            let splitIndex = remarkFull.indexOf('\n');
-                            if (splitIndex !== -1) {
-                                r.doc_number = remarkFull.substring(7, splitIndex).trim(); 
-                                r.action = remarkFull.substring(splitIndex + 1).trim();
-                            } else {
-                                let matchDoc = remarkFull.match(/^เลขที่:\s*([^\s]+)\s*(.*)$/);
-                                if (matchDoc) { r.doc_number = matchDoc[1]; r.action = matchDoc[2]; }
-                            }
-                        }
-                    });
+                    let newDb = mapApiResponse(data.data);
 
-                    // อัปเดตข้อมูลในเครื่อง
-                    db = newDb;
-                    localStorage.setItem('kmitl_rt_db', JSON.stringify(db));
+                    if (JSON.stringify(db) !== JSON.stringify(newDb)) {
+                        db = newDb;
+                        localStorage.setItem('kmitl_rt_db', JSON.stringify(db));
 
-                    // ถ้าผู้ใช้กำลังยืนมองหน้าปฏิทินอยู่ ให้รีเฟรชตารางและจุดสีส้มทันที!
-                    if (document.getElementById('listSection').style.display === 'block') {
-                        renderCalendar();
-                        showList(selectedDateStr);
+                        if (document.getElementById('listSection').style.display === 'block') {
+                            renderCalendar();
+                            showList(selectedDateStr);
+                        }
                     }
                 }
-            } catch(e) {
-                // ถ้าเน็ตหลุดตอนแอบดึงข้อมูล ก็ปล่อยผ่านเงียบๆ ไม่ต้องเด้ง Error กวนใจ
-            }
-        }, 5000); // (ปรับเลขได้ตามต้องการ)
+            } catch(e) {}
+        }, 5000); 
     </script>
 </body>
 </html>
