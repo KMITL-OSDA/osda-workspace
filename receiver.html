@@ -232,15 +232,23 @@
 </div>
 
 <script>
+    // 🚨 ระบบตรวจสอบสิทธิ์ (Auth Guard): ถ้ายังไม่ได้ล็อกอิน ให้เด้งกลับไปหน้าล็อกอิน (index.html) ทันที!
+    const isLocalFile = window.location.protocol === 'file:';
+    if (!isLocalFile && sessionStorage.getItem('osda_auth') !== 'true') {
+        window.location.href = 'index.html';
+    }
+
     // ==========================================
     // ⚙️ ตั้งค่าเริ่มต้น Web App URL และคีย์ ImgBB
     // ==========================================
-    let WEB_APP_URL = localStorage.getItem('OSDA_WEB_APP_URL') || "https://script.google.com/macros/s/AKfycbwNG6VnI9TeFRh9-vXjD5Kw1XZpaExOqY04lnqp6yehU0BKFyFC2yEyO4CXjfZAgx405Q/exec";
-    let IMGBB_API_KEY = localStorage.getItem('OSDA_IMGBB_KEY') || "";
+    let WEB_APP_URL = localStorage.getItem('OSDA_WEB_APP_URL') || "https://script.google.com/macros/s/AKfycbxLD8sWpqYT0lJ7V4xFXjhcIGd6AZF2gAcNeS5egouDU8pid7Dbgt7kCD1d2qnIJQlHMg/exec";
+    let IMGBB_API_KEY = localStorage.getItem('OSDA_IMGBB_KEY') || "943c4187147fb6507b61c2c6de104cfa";
     // ==========================================
 
     localforage.config({ name: 'OSDA_STORAGE' });
-    let db = JSON.parse(localStorage.getItem('OSDA_DB_PRO') || '[]');
+    
+    // 🌟 เอาการจำค่า cache ใน localStorage ตั้งต้นออก เพื่อล้างผีของเก่าหลอนหน้าจอของทุกคน
+    let db = []; 
     let currentMode = 'hub'; 
     let realTimeClock; 
     let currentPage = 1;
@@ -251,7 +259,7 @@
     // 🌟 ระบบคลังรายชื่อ (Email Mapping) - ครบถ้วน 13 คน + นาย
     // ==========================================
     const USER_MAPPING = {
-        "66040181@kmitl.ac.th": "เขต", // 👈 แก้คีย์อีเมลตรงนี้เป็นอีเมลส่วนตัวของนายได้เลย!
+        "66040181@kmitl.ac.th": "เขต", // 👈 แก้คีย์อีเมลตรงนี้เป็นอีเมลส่วนตัวของนายเพื่อทดสอบ
         "66040190@kmitl.ac.th": "มดแดง",
         "wiphawan.su@kmitl.ac.th": "พี่วิภาวรรณ สุขดี",
         "surachai.ra@kmitl.ac.th": "พี่สุรชัย รักเรียน",
@@ -370,6 +378,14 @@
         lucide.createIcons();
         updateUserBadge(); // อัปเดตป้ายชื่อทันทีที่เปิดหน้า
         await syncDataFromCloud(); 
+        
+        // 🌟 ตั้งค่าระบบออโต้รีเฟรชตารางทำงานเงียบๆ ทุกๆ 8 วินาที
+        // คราวนี้ถ้าคนอื่นกดบันทึกหรือลบข้อมูล ตารางบนหน้าจอของทุกคนจะอัปเดตพร้อมกันโดยไม่ต้องกด F5 เลย!
+        setInterval(async () => {
+            if (currentMode === 'hub') {
+                await syncDataFromCloud(true); // ซิงก์เงียบๆ เบื้องหลัง
+            }
+        }, 8000);
     }
 
     window.openForm = (mode) => {
@@ -447,9 +463,11 @@
         syncDataFromCloud(); 
     };
 
-    async function syncDataFromCloud() {
+    // 🌟 ดึงข้อมูลจาก Sheets หลังบ้านโดยตรงเสมอเพื่อขจัดปัญหารูปภาพหรือบันทึกหลอนค้างหน้าเว็บ
+    async function syncDataFromCloud(isBackground = false) {
         const container = document.getElementById('recordList');
-        if(container) {
+        // แสดง Spinner เฉพาะเมื่อไม่ใช่การรีเฟรชเงียบเบื้องหลัง เพื่อไม่ให้รบกวนสายตาคนทำงาน
+        if(container && !isBackground && db.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 text-blue-600 font-bold flex flex-col items-center justify-center gap-3">
                     <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -465,13 +483,16 @@
             const data = await response.json();
             
             if (data.status === 'success' && data.data) {
+                // อัปเดตตัวแปร db ในหน้าจอหลัก
                 db = data.data.map(r => ({
                     ...r,
                     creator: String(r.creator || ''),
                     editor: String(r.editor || ''),
                     fileUrl: String(r.hasFile || 'ไม่มีไฟล์')
                 })); 
-                localStorage.setItem('OSDA_DB_PRO', JSON.stringify(db)); 
+            } else {
+                // หากหลังบ้านส่งว่าไม่มีข้อมูลแล้ว ให้เคลียร์หน้าเว็บทั้งหมด
+                db = [];
             }
         } catch (err) {
             console.error("Sync Error:", err);
@@ -701,7 +722,6 @@
             (r.sender || '').toLowerCase().includes(q)
         ).sort((a,b) => b.id - a.id);
         
-        currentPage = 1; 
         renderList();
     }
 
@@ -710,6 +730,8 @@
 
     function renderList() {
         const container = document.getElementById('recordList');
+        if (!container) return;
+        
         container.innerHTML = '';
         
         if (filteredRecords.length === 0) {
@@ -719,6 +741,12 @@
         }
 
         const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+        
+        // 🌟 ป้องกันกรณีที่หน้าปัจจุบันมีเลขหน้าเกินจำนวนหน้าจริงที่มีอยู่ (เช่น หลังลบรายการข้อมูลจนหน้าลดลง)
+        if (currentPage > totalPages) {
+            currentPage = totalPages || 1;
+        }
+
         document.getElementById('paginationControls').style.display = 'flex';
         document.getElementById('pageInfo').innerText = `หน้า ${currentPage} / ${totalPages}`;
         document.getElementById('btnPrev').disabled = (currentPage === 1);
@@ -734,17 +762,21 @@
                 ? `<span class="bg-yellow-100 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-full text-[10px] font-black">รับย้อนหลัง</span>`
                 : `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black">รับแล้ว</span>`;
 
+            // 🌟 ปรับปรุงการแสดงผลชื่อผู้บันทึกให้แปลงเป็นชื่อไทยแบบ Real-time ย้อนหลังตลอดเวลา
+            const thaiCreator = getUserDisplayName(r.creator);
+            const thaiEditor = r.editor ? getUserDisplayName(r.editor) : "";
+
             let userTrackHtml = '';
-            if (r.creator) {
-                if (r.editor && r.editor !== r.creator) {
+            if (thaiCreator) {
+                if (thaiEditor && thaiEditor !== thaiCreator) {
                     userTrackHtml = `
                         <div class="text-[10px] text-blue-600 font-bold mt-1 flex items-center gap-1 bg-blue-50/70 px-2 py-0.5 rounded border border-blue-100 w-fit">
-                            <i data-lucide="user" class="w-3 h-3"></i> บันทึกโดย: ${r.creator} (แก้ไขโดย: ${r.editor})
+                            <i data-lucide="user" class="w-3 h-3"></i> บันทึกโดย: ${thaiCreator} (แก้ไขโดย: ${thaiEditor})
                         </div>`;
                 } else {
                     userTrackHtml = `
                         <div class="text-[10px] text-slate-400 font-medium mt-1 flex items-center gap-1">
-                            <i data-lucide="user" class="w-3 h-3"></i> บันทึกโดย: ${r.creator}
+                            <i data-lucide="user" class="w-3 h-3"></i> บันทึกโดย: ${thaiCreator}
                         </div>`;
                 }
             }
@@ -864,14 +896,9 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action: 'delete', sheetType: 'receiver', id: String(id) }) 
                 });
-
-                let currentDb = JSON.parse(localStorage.getItem('OSDA_DB_PRO')) || [];
-                currentDb = currentDb.filter(x => String(x.id) !== String(id));
-                localStorage.setItem('OSDA_DB_PRO', JSON.stringify(currentDb));
                 
                 await Swal.fire({ icon: 'success', title: 'ลบสำเร็จ!', timer: 1000, showConfirmButton: false });
-                location.reload(); 
-
+                await syncDataFromCloud(); // ดึงข้อมูลชุดสดใหม่จากชีททันทีเพื่ออัปเดตหน้าจอทุกคน
             } catch (error) {
                 console.error(error);
                 Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาดในการทำรายการ!', text: String(error) });
@@ -880,9 +907,7 @@
     };
 
     function checkAndReuseDeletedSeq() {
-        let currentDb = JSON.parse(localStorage.getItem('OSDA_DB_PRO') || '[]');
-        
-        let existingSeqs = currentDb.map(item => {
+        let existingSeqs = db.map(item => {
             let num = parseInt(String(item.seq).replace(/[^0-9]/g, ''), 10);
             return isNaN(num) ? null : num;
         }).filter(num => num !== null);
